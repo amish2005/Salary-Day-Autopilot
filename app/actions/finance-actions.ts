@@ -5,6 +5,7 @@ import * as repo from '@/lib/db/repository';
 import { buildFinancialSummary } from '@/lib/finance/financial-summary';
 import { analyzeUnexpectedExpense } from '@/lib/finance/emergency-engine';
 import { formatRupees } from '@/lib/finance/date-utils';
+import { evaluateAutopay } from '@/lib/finance/autopay-engine';
 import { BillData, TransactionData, SavingsGoalData, CreditCardData, IncomeSourceData, ProfileData } from '@/lib/finance/types';
 import { revalidatePath } from 'next/cache';
 
@@ -34,6 +35,42 @@ export async function getCompleteFinancialDataAction() {
       current_balance: 4500000,
       onboarding_completed: true,
     };
+  }
+
+  // Automatic Autopay Check: Automatically pay eligible bills before due date if balance available
+  let rawBills = await repo.getBills(userId);
+  const autopayEval = evaluateAutopay(profile!, rawBills, new Date());
+
+  if (autopayEval.paidBills.length > 0) {
+    for (const item of autopayEval.paidBills) {
+      await repo.updateBill(userId, item.bill.id, {
+        is_paid: true,
+        paid_amount: item.bill.amount,
+        paid_date: new Date().toISOString(),
+      });
+
+      await repo.addTransaction(userId, {
+        description: `Autopay: ${item.bill.name}`,
+        amount: item.amountPaidPaise,
+        category: item.bill.category,
+        payment_method: 'bank',
+        date: new Date().toISOString().split('T')[0],
+        notes: `Automatically settled before due date via Autopay`,
+      });
+
+      await repo.logActivity(userId, {
+        action_type: 'AUTOPAY_EXECUTED',
+        amount: item.amountPaidPaise,
+        previous_state: `Due: ${formatRupees(item.amountPaidPaise)}`,
+        new_state: 'Paid via Autopay',
+        explanation: `Autopay executed: Paid ${formatRupees(item.amountPaidPaise)} for ${item.bill.name} before due date because sufficient balance was available.`,
+      });
+    }
+
+    await repo.upsertProfile(userId, {
+      current_balance: autopayEval.newBalancePaise,
+    });
+    profile = await repo.getProfile(userId);
   }
 
   const [bills, incomeSources, creditCards, savingsGoals, transactions, activities] = await Promise.all([
@@ -362,6 +399,43 @@ export async function ignoreBillForMonthAction({
 
   revalidatePath('/bills');
   revalidatePath('/dashboard');
+  revalidatePath('/activity');
+  return updated;
+}
+
+/**
+ * Toggle Autopay on / off for a bill
+ * Automatically pays the bill before its due date if the user has sufficient bank balance
+ */
+export async function toggleBillAutopayAction({
+  billId,
+  autopay,
+}: {
+  billId: string;
+  autopay: boolean;
+}) {
+  const userId = await getCurrentUserId();
+  const bills = await repo.getBills(userId);
+  const targetBill = bills.find((b) => b.id === billId);
+  if (!targetBill) throw new Error('Bill not found');
+
+  const updated = await repo.updateBill(userId, billId, {
+    autopay,
+  });
+
+  await repo.logActivity(userId, {
+    action_type: 'AUTOPAY_TOGGLED',
+    amount: targetBill.amount,
+    previous_state: targetBill.autopay ? 'Autopay Enabled' : 'Manual Pay',
+    new_state: autopay ? 'Autopay Enabled' : 'Manual Pay',
+    explanation: autopay
+      ? `Enabled Autopay for ${targetBill.name}. It will be auto-debited before due date (day ${targetBill.due_date}th) if bank balance is sufficient.`
+      : `Disabled Autopay for ${targetBill.name}. Payment must now be confirmed manually.`,
+  });
+
+  revalidatePath('/bills');
+  revalidatePath('/dashboard');
+  revalidatePath('/settings');
   revalidatePath('/activity');
   return updated;
 }
@@ -761,6 +835,7 @@ export async function saveCustomOnboardingAction({
     recurrence: 'monthly' | 'annual';
     category: string;
     priority: 'critical' | 'high' | 'essential' | 'discretionary';
+    autopay?: boolean;
   }>;
   incomeSources?: Array<{
     name: string;
@@ -803,6 +878,7 @@ export async function saveCustomOnboardingAction({
         recurrence: bill.recurrence || 'monthly',
         category: bill.category || 'Living',
         priority: bill.priority || 'high',
+        autopay: bill.autopay ?? false,
         is_paid: false,
       });
     }

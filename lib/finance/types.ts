@@ -43,6 +43,7 @@ export interface BillData {
   amount: number; // in paise
   paid_amount?: number; // in paise, for partial payment
   is_ignored?: boolean; // if ignored for this month
+  autopay?: boolean; // automatically pay before due date if balance available
   due_date: number; // 1-31
   recurrence: BillRecurrence;
   annual_month?: number; // 1-12 (e.g. 2 for February)

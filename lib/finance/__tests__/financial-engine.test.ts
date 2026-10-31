@@ -6,6 +6,7 @@ import { analyzeUnexpectedExpense } from '../emergency-engine';
 import { runAutopilotAllocation } from '../allocation-engine';
 import { calculateCreditCardLiabilities } from '../credit-card-engine';
 import { evaluateSavingsGoals } from '../savings-engine';
+import { evaluateAutopay } from '../autopay-engine';
 import { ProfileData, BillData, SavingsGoalData, CreditCardData, TransactionData, IncomeSourceData } from '../types';
 
 describe('Financial Engine - Format & Date Utilities', () => {
@@ -206,5 +207,34 @@ describe('Financial Engine - Mandatory Edge Cases', () => {
     expect(schedule.totalUnpaidObligationsPaise).toBe(0);
     expect(schedule.ignoredBills.length).toBe(1);
     expect(schedule.upcomingBills.length).toBe(0);
+  });
+
+  it('Autopay Engine: Automatically executes payment before due date if balance is sufficient', () => {
+    const profile: ProfileData = { ...arjunProfile, current_balance: 6000000 }; // ₹60,000 balance
+    const bills: BillData[] = [
+      // Due in 2 days (Oct 7, today is Oct 5), autopay enabled
+      { id: 'b-emi', user_id: 'user-arjun', name: 'Bike EMI', amount: 600000, due_date: 7, recurrence: 'monthly', category: 'Vehicle', priority: 'critical', is_paid: false, autopay: true },
+      // Due in 20 days, autopay enabled (should NOT pay yet)
+      { id: 'b-ins', user_id: 'user-arjun', name: 'Insurance', amount: 480000, due_date: 25, recurrence: 'monthly', category: 'Insurance', priority: 'high', is_paid: false, autopay: true },
+    ];
+
+    const result = evaluateAutopay(profile, bills, new Date('2026-10-05'));
+    expect(result.paidBills.length).toBe(1);
+    expect(result.paidBills[0].bill.name).toBe('Bike EMI');
+    expect(result.paidBills[0].amountPaidPaise).toBe(600000);
+    expect(result.newBalancePaise).toBe(5400000);
+    expect(result.skippedBills.length).toBe(1); // 20 days away
+  });
+
+  it('Autopay Engine: Prevents payment if balance is insufficient', () => {
+    const profile: ProfileData = { ...arjunProfile, current_balance: 100000 }; // ₹1,000 balance only
+    const bills: BillData[] = [
+      { id: 'b-rent', user_id: 'user-arjun', name: 'Rent', amount: 1500000, due_date: 6, recurrence: 'monthly', category: 'Housing', priority: 'critical', is_paid: false, autopay: true },
+    ];
+
+    const result = evaluateAutopay(profile, bills, new Date('2026-10-05'));
+    expect(result.paidBills.length).toBe(0);
+    expect(result.skippedBills.length).toBe(1);
+    expect(result.newBalancePaise).toBe(100000); // balance untouched
   });
 });

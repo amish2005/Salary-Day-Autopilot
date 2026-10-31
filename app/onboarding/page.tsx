@@ -16,6 +16,7 @@ import {
   Calendar,
   Layers,
   ArrowLeft,
+  Zap,
 } from 'lucide-react';
 import { formatRupees } from '@/lib/finance/date-utils';
 import {
@@ -30,6 +31,7 @@ interface DynamicBillItem {
   dueDate: string;
   category: string;
   priority: 'critical' | 'high' | 'essential' | 'discretionary';
+  autopay?: boolean;
 }
 
 interface DynamicIncomeItem {
@@ -95,6 +97,7 @@ export default function OnboardingPage() {
       dueDate: '1',
       category: 'Housing',
       priority: 'critical',
+      autopay: true,
     },
     {
       id: '2',
@@ -103,6 +106,7 @@ export default function OnboardingPage() {
       dueDate: '5',
       category: 'Vehicle',
       priority: 'critical',
+      autopay: true,
     },
     {
       id: '3',
@@ -111,6 +115,7 @@ export default function OnboardingPage() {
       dueDate: '15',
       category: 'Living',
       priority: 'essential',
+      autopay: false,
     },
     {
       id: '4',
@@ -119,6 +124,7 @@ export default function OnboardingPage() {
       dueDate: '12',
       category: 'Utilities',
       priority: 'high',
+      autopay: false,
     },
   ]);
 
@@ -131,6 +137,7 @@ export default function OnboardingPage() {
       dueDate: prefill?.dueDate || '10',
       category: prefill?.category || 'Living',
       priority: prefill?.priority || 'high',
+      autopay: prefill?.autopay ?? false,
     };
     setBills((prev) => [...prev, newBill]);
   };
@@ -139,27 +146,35 @@ export default function OnboardingPage() {
   const handleRemoveBill = (id: string) => {
     if (bills.length === 1) {
       // Keep at least one row, just clear fields
-      setBills([{ id: '1', name: '', amount: '', dueDate: '1', category: 'Housing', priority: 'high' }]);
+      setBills([{ id: '1', name: '', amount: '', dueDate: '1', category: 'Housing', priority: 'high', autopay: false }]);
       return;
     }
     setBills((prev) => prev.filter((b) => b.id !== id));
   };
 
   // Update a field on a bill row
-  const handleUpdateBillField = (id: string, field: keyof DynamicBillItem, value: string) => {
+  const handleUpdateBillField = (id: string, field: keyof DynamicBillItem, value: any) => {
     setBills((prev) =>
       prev.map((b) => (b.id === id ? { ...b, [field]: value } : b))
     );
   };
 
   // Quick template suggestion click
-  const handleQuickAddTemplate = (name: string, defaultAmount: string, defaultDate: string, category: string, priority: DynamicBillItem['priority']) => {
+  const handleQuickAddTemplate = (
+    name: string,
+    defaultAmount: string,
+    defaultDate: string,
+    category: string,
+    priority: DynamicBillItem['priority'],
+    autopay = false
+  ) => {
     handleAddBillRow({
       name,
       amount: defaultAmount,
       dueDate: defaultDate,
       category,
       priority,
+      autopay,
     });
   };
 
@@ -199,6 +214,7 @@ export default function OnboardingPage() {
           recurrence: 'monthly' as const,
           category: b.category || 'Living',
           priority: b.priority,
+          autopay: Boolean(b.autopay),
         }));
 
       const formattedIncomes = additionalIncomes
@@ -573,11 +589,12 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* Column Headers for Desktop */}
-                <div className="hidden sm:grid grid-cols-12 gap-3 px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-900/40 rounded-lg border border-slate-800/60">
-                  <div className="col-span-5">Bill / Payment Label</div>
+                <div className="hidden sm:grid grid-cols-12 gap-2.5 px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-900/40 rounded-lg border border-slate-800/60">
+                  <div className="col-span-4">Bill / Payment Label</div>
                   <div className="col-span-2">Amount (₹)</div>
-                  <div className="col-span-2 text-center">Due Date (Day 1-31)</div>
-                  <div className="col-span-2">Priority Level</div>
+                  <div className="col-span-2 text-center">Due Day (1-31)</div>
+                  <div className="col-span-2">Priority</div>
+                  <div className="col-span-1 text-center">Autopay</div>
                   <div className="col-span-1 text-center">Action</div>
                 </div>
 
@@ -588,7 +605,7 @@ export default function OnboardingPage() {
                       className="p-3.5 sm:p-4 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all flex flex-col sm:grid sm:grid-cols-12 sm:items-center gap-3"
                     >
                       {/* Bill Name */}
-                      <div className="col-span-5">
+                      <div className="col-span-4">
                         <label className="block text-[10px] text-slate-400 mb-1 font-medium sm:hidden">
                           Bill / Payment Label
                         </label>
@@ -648,13 +665,30 @@ export default function OnboardingPage() {
                         <select
                           value={item.priority}
                           onChange={(e: any) => handleUpdateBillField(item.id, 'priority', e.target.value)}
-                          className="w-full px-2.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          className="w-full px-2 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
                         >
                           <option value="critical">Critical (Rent/EMI)</option>
                           <option value="high">High (Parents/WiFi)</option>
                           <option value="essential">Essential (Living)</option>
                           <option value="discretionary">Optional</option>
                         </select>
+                      </div>
+
+                      {/* Autopay Toggle */}
+                      <div className="col-span-1 text-center">
+                        <label className="flex items-center justify-between sm:justify-center cursor-pointer select-none">
+                          <span className="text-[10px] text-slate-400 font-medium sm:hidden flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
+                            Autopay
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(item.autopay)}
+                            onChange={(e) => handleUpdateBillField(item.id, 'autopay', e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-500 bg-slate-800 border-slate-700 focus:ring-emerald-500"
+                            title="Enable Autopay"
+                          />
+                        </label>
                       </div>
 
                       {/* Delete */}

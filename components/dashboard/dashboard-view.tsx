@@ -47,6 +47,7 @@ import {
   deleteBillAction,
   confirmIncomeArrivalAction,
   addIncomeSourceAction,
+  toggleBillAutopayAction,
 } from '@/app/actions/finance-actions';
 
 interface DashboardViewProps {
@@ -292,6 +293,28 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       setOpenBillDropdownId(null);
       await deleteBillAction(billId);
       setStatusNotification(`Deleted "${name}".`);
+      router.refresh();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setLoadingBillId(null);
+    }
+  };
+
+  // 9. Toggle Bill Autopay
+  const handleToggleBillAutopay = async (bill: BillData) => {
+    try {
+      setLoadingBillId(bill.id);
+      setOpenBillDropdownId(null);
+      await toggleBillAutopayAction({
+        billId: bill.id,
+        autopay: !bill.autopay,
+      });
+      setStatusNotification(
+        bill.autopay
+          ? `Disabled Autopay for "${bill.name}".`
+          : `⚡ Autopay enabled for "${bill.name}". Autopilot will pay before due date if funds are sufficient.`
+      );
       router.refresh();
     } catch (e: any) {
       alert(e.message);
@@ -673,6 +696,12 @@ export function DashboardView({ initialData }: DashboardViewProps) {
                             Critical
                           </span>
                         ) : null}
+                        {bill.autopay && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30 flex items-center gap-0.5">
+                            <Zap className="w-2.5 h-2.5 text-emerald-400 fill-emerald-400" />
+                            Autopay
+                          </span>
+                        )}
                       </div>
 
                       <div className="text-[11px] text-slate-400">
@@ -760,6 +789,14 @@ export function DashboardView({ initialData }: DashboardViewProps) {
                               <span>Record Partial Pay</span>
                             </button>
                           )}
+
+                          <button
+                            onClick={() => handleToggleBillAutopay(bill)}
+                            className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center gap-2 text-cyan-300"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                            <span>{bill.autopay ? 'Disable Autopay' : '⚡ Enable Autopay'}</span>
+                          </button>
 
                           <button
                             onClick={() => handleToggleIgnoreBill(bill)}

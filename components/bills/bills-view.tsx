@@ -17,6 +17,7 @@ import {
   CreditCard,
   DollarSign,
   RotateCcw,
+  Zap,
 } from 'lucide-react';
 import { formatRupees } from '@/lib/finance/date-utils';
 import { BillData } from '@/lib/finance/types';
@@ -27,6 +28,7 @@ import {
   recordBillPaymentAction,
   ignoreBillForMonthAction,
   updateBillAction,
+  toggleBillAutopayAction,
 } from '@/app/actions/finance-actions';
 
 interface BillsViewProps {
@@ -51,6 +53,7 @@ export function BillsView({ bills }: BillsViewProps) {
   const [editDueDate, setEditDueDate] = useState('1');
   const [editCategory, setEditCategory] = useState('Living');
   const [editPriority, setEditPriority] = useState<BillData['priority']>('high');
+  const [editAutopay, setEditAutopay] = useState(false);
 
   // New bill state
   const [name, setName] = useState('');
@@ -60,6 +63,7 @@ export function BillsView({ bills }: BillsViewProps) {
   const [annualMonth, setAnnualMonth] = useState('2');
   const [category, setCategory] = useState('Housing');
   const [priority, setPriority] = useState<BillData['priority']>('high');
+  const [autopay, setAutopay] = useState(false);
 
   const filteredBills = bills.filter((b) => {
     if (filter === 'ignored') return Boolean(b.is_ignored);
@@ -147,6 +151,7 @@ export function BillsView({ bills }: BillsViewProps) {
     setEditDueDate(String(bill.due_date));
     setEditCategory(bill.category);
     setEditPriority(bill.priority);
+    setEditAutopay(Boolean(bill.autopay));
     setOpenDropdownId(null);
   };
 
@@ -162,11 +167,29 @@ export function BillsView({ bills }: BillsViewProps) {
         due_date: Number(editDueDate),
         category: editCategory,
         priority: editPriority,
+        autopay: editAutopay,
       });
       setEditModalBill(null);
       router.refresh();
     } catch (e: any) {
       alert(`Update error: ${e.message}`);
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  // Toggle Autopay
+  const handleToggleAutopay = async (bill: BillData) => {
+    try {
+      setLoadingId(bill.id);
+      setOpenDropdownId(null);
+      await toggleBillAutopayAction({
+        billId: bill.id,
+        autopay: !bill.autopay,
+      });
+      router.refresh();
+    } catch (e: any) {
+      alert(`Autopay error: ${e.message}`);
     } finally {
       setLoadingId(null);
     }
@@ -186,11 +209,13 @@ export function BillsView({ bills }: BillsViewProps) {
         annual_month: recurrence === 'annual' ? Number(annualMonth) : undefined,
         category,
         priority,
+        autopay,
         is_paid: false,
       });
       setIsAddModalOpen(false);
       setName('');
       setAmountRupees('');
+      setAutopay(false);
       router.refresh();
     } catch (e: any) {
       alert(e.message);
@@ -327,6 +352,13 @@ export function BillsView({ bills }: BillsViewProps) {
                           Annual (Month {bill.annual_month})
                         </span>
                       )}
+
+                      {bill.autopay && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30 flex items-center gap-1">
+                          <Zap className="w-2.5 h-2.5 fill-emerald-400 text-emerald-400" />
+                          Autopay Active
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-xs text-slate-400 mt-1">
@@ -433,6 +465,14 @@ export function BillsView({ bills }: BillsViewProps) {
                           >
                             <EyeOff className="w-3.5 h-3.5" />
                             <span>{bill.is_ignored ? 'Restore to this Month' : 'Ignore for this Month'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleToggleAutopay(bill)}
+                            className="w-full text-left px-3.5 py-2 hover:bg-slate-800/80 flex items-center gap-2 text-cyan-300"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                            <span>{bill.autopay ? 'Disable Autopay' : '⚡ Enable Autopay'}</span>
                           </button>
 
                           <button
@@ -626,6 +666,25 @@ export function BillsView({ bills }: BillsViewProps) {
                 </div>
               </div>
 
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <input
+                  type="checkbox"
+                  id="edit-autopay"
+                  checked={editAutopay}
+                  onChange={(e) => setEditAutopay(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-500 bg-slate-800 border-slate-700 focus:ring-emerald-500"
+                />
+                <label htmlFor="edit-autopay" className="text-xs text-slate-300 cursor-pointer select-none">
+                  <span className="font-semibold text-white flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    Enable Autopay
+                  </span>
+                  <span className="block text-[11px] text-slate-400 mt-0.5">
+                    Automatically pays 1–3 days before due date if bank balance has sufficient funds.
+                  </span>
+                </label>
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -770,6 +829,25 @@ export function BillsView({ bills }: BillsViewProps) {
                   <option value="essential">Essential (Groceries, Commute)</option>
                   <option value="discretionary">Discretionary (Subscriptions, Entertainment)</option>
                 </select>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <input
+                  type="checkbox"
+                  id="add-autopay"
+                  checked={autopay}
+                  onChange={(e) => setAutopay(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-500 bg-slate-800 border-slate-700 focus:ring-emerald-500"
+                />
+                <label htmlFor="add-autopay" className="text-xs text-slate-300 cursor-pointer select-none">
+                  <span className="font-semibold text-white flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    Enable Autopay
+                  </span>
+                  <span className="block text-[11px] text-slate-400 mt-0.5">
+                    Automatically pays 1–3 days before due date if bank balance has sufficient funds.
+                  </span>
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

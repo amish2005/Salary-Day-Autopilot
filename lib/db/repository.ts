@@ -99,6 +99,7 @@ export async function upsertProfile(userId: string, data: Partial<ProfileData>):
 function parseBillRow(data: any): BillData {
   let paid_amount = Number(data.paid_amount) || 0;
   let is_ignored = Boolean(data.is_ignored);
+  let autopay = Boolean(data.autopay ?? data.is_autopay);
   let notes = data.notes || '';
 
   if (notes.includes('__META__')) {
@@ -108,6 +109,7 @@ function parseBillRow(data: any): BillData {
         const meta = JSON.parse(match[1]);
         if (paid_amount === 0 && meta.paid_amount !== undefined) paid_amount = meta.paid_amount;
         if (!is_ignored && meta.is_ignored !== undefined) is_ignored = Boolean(meta.is_ignored);
+        if (data.autopay === undefined && meta.autopay !== undefined) autopay = Boolean(meta.autopay);
       }
     } catch {}
   }
@@ -116,13 +118,18 @@ function parseBillRow(data: any): BillData {
     ...data,
     paid_amount,
     is_ignored,
+    autopay,
   };
 }
 
-function encodeBillNotes(notes: string | undefined, paid_amount?: number, is_ignored?: boolean): string {
+function encodeBillNotes(notes: string | undefined, paid_amount?: number, is_ignored?: boolean, autopay?: boolean): string {
   let clean = (notes || '').replace(/__META__.*?__META__/g, '').trim();
-  if (paid_amount !== undefined || is_ignored !== undefined) {
-    const metaStr = `__META__${JSON.stringify({ paid_amount: paid_amount || 0, is_ignored: Boolean(is_ignored) })}__META__`;
+  if (paid_amount !== undefined || is_ignored !== undefined || autopay !== undefined) {
+    const metaStr = `__META__${JSON.stringify({
+      paid_amount: paid_amount || 0,
+      is_ignored: Boolean(is_ignored),
+      autopay: Boolean(autopay),
+    })}__META__`;
     return clean ? `${clean} ${metaStr}` : metaStr;
   }
   return clean;
@@ -185,7 +192,7 @@ export async function addBill(userId: string, bill: Omit<BillData, 'id' | 'user_
     user_id: userId,
   };
 
-  const encodedNotes = encodeBillNotes(bill.notes, bill.paid_amount, bill.is_ignored);
+  const encodedNotes = encodeBillNotes(bill.notes, bill.paid_amount, bill.is_ignored, bill.autopay);
   const payloadToSave = {
     ...newBill,
     notes: encodedNotes,
@@ -195,8 +202,8 @@ export async function addBill(userId: string, bill: Omit<BillData, 'id' | 'user_
     // Try full insert first
     let { data, error } = await supabaseServer.from('bills').insert(payloadToSave).select().single();
     if (error && error.message?.includes('column')) {
-      // If table doesn't have paid_amount or is_ignored columns yet, omit them and let notes handle it
-      const { paid_amount, is_ignored, ...cleanPayload } = payloadToSave as any;
+      // If table doesn't have paid_amount, is_ignored, or autopay columns yet, omit them and let notes handle it
+      const { paid_amount, is_ignored, autopay, is_autopay, ...cleanPayload } = payloadToSave as any;
       const retry = await supabaseServer.from('bills').insert(cleanPayload).select().single();
       data = retry.data;
       error = retry.error;
@@ -220,7 +227,8 @@ export async function updateBill(userId: string, id: string, updates: Partial<Bi
 
   const mergedPaid = updates.paid_amount !== undefined ? updates.paid_amount : existingBill?.paid_amount;
   const mergedIgnored = updates.is_ignored !== undefined ? updates.is_ignored : existingBill?.is_ignored;
-  const encodedNotes = encodeBillNotes(updates.notes || existingBill?.notes, mergedPaid, mergedIgnored);
+  const mergedAutopay = updates.autopay !== undefined ? updates.autopay : existingBill?.autopay;
+  const encodedNotes = encodeBillNotes(updates.notes || existingBill?.notes, mergedPaid, mergedIgnored, mergedAutopay);
 
   const payload: any = {
     ...updates,
@@ -237,7 +245,7 @@ export async function updateBill(userId: string, id: string, updates: Partial<Bi
       .single();
 
     if (error && error.message?.includes('column')) {
-      const { paid_amount, is_ignored, ...cleanPayload } = payload;
+      const { paid_amount, is_ignored, autopay, is_autopay, ...cleanPayload } = payload;
       const retry = await supabaseServer
         .from('bills')
         .update(cleanPayload)

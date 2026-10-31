@@ -19,6 +19,7 @@ import {
   X,
   Clock,
   AlertTriangle,
+  Zap,
 } from 'lucide-react';
 import { formatRupees } from '@/lib/finance/date-utils';
 import { ProfileData, TransactionData, BillData } from '@/lib/finance/types';
@@ -57,6 +58,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
   const [newBillAnnualMonth, setNewBillAnnualMonth] = useState('2');
   const [newBillCategory, setNewBillCategory] = useState('Housing');
   const [newBillPriority, setNewBillPriority] = useState<BillData['priority']>('high');
+  const [newBillAutopay, setNewBillAutopay] = useState(false);
 
   // Edit Bill Modal State
   const [editBill, setEditBill] = useState<BillData | null>(null);
@@ -65,6 +67,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
   const [editDueDate, setEditDueDate] = useState('1');
   const [editCategory, setEditCategory] = useState('Housing');
   const [editPriority, setEditPriority] = useState<BillData['priority']>('high');
+  const [editAutopay, setEditAutopay] = useState(false);
 
   // 1. Save Profile Preferences
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -102,11 +105,13 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
         annual_month: newBillRecurrence === 'annual' ? Number(newBillAnnualMonth) : undefined,
         category: newBillCategory,
         priority: newBillPriority,
+        autopay: newBillAutopay,
         is_paid: false,
       });
       setIsAddBillOpen(false);
       setNewBillName('');
       setNewBillAmount('');
+      setNewBillAutopay(false);
       setSuccessMsg(`Added new bill: "${newBillName}".`);
       router.refresh();
     } catch (e: any) {
@@ -124,6 +129,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
     setEditDueDate(String(bill.due_date));
     setEditCategory(bill.category);
     setEditPriority(bill.priority);
+    setEditAutopay(Boolean(bill.autopay));
   };
 
   // 4. Submit Edit Bill & Due Date
@@ -138,6 +144,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
         due_date: Number(editDueDate),
         category: editCategory,
         priority: editPriority,
+        autopay: editAutopay,
       });
       setEditBill(null);
       setSuccessMsg(`Updated bill: "${editName}" with due date day ${editDueDate}.`);
@@ -374,6 +381,12 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
                           Ignored
                         </span>
                       )}
+                      {bill.autopay && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30 flex items-center gap-1">
+                          <Zap className="w-2.5 h-2.5 text-emerald-400 fill-emerald-400" />
+                          Autopay
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-1">
@@ -550,6 +563,25 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
                 </div>
               </div>
 
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <input
+                  type="checkbox"
+                  id="settings-add-autopay"
+                  checked={newBillAutopay}
+                  onChange={(e) => setNewBillAutopay(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-500 bg-slate-800 border-slate-700 focus:ring-emerald-500"
+                />
+                <label htmlFor="settings-add-autopay" className="text-xs text-slate-300 cursor-pointer select-none">
+                  <span className="font-semibold text-white flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    Enable Autopay
+                  </span>
+                  <span className="block text-[11px] text-slate-400 mt-0.5">
+                    Automatically debits 1–3 days before scheduled due date if bank funds are sufficient.
+                  </span>
+                </label>
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -657,6 +689,25 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
                     <option value="discretionary">Discretionary (Subscriptions)</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <input
+                  type="checkbox"
+                  id="settings-edit-autopay"
+                  checked={editAutopay}
+                  onChange={(e) => setEditAutopay(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-500 bg-slate-800 border-slate-700 focus:ring-emerald-500"
+                />
+                <label htmlFor="settings-edit-autopay" className="text-xs text-slate-300 cursor-pointer select-none">
+                  <span className="font-semibold text-white flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    Enable Autopay
+                  </span>
+                  <span className="block text-[11px] text-slate-400 mt-0.5">
+                    Automatically debits 1–3 days before scheduled due date if bank funds are sufficient.
+                  </span>
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
