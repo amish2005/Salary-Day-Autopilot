@@ -411,33 +411,10 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* 1. Top Section Greeting & Quick Action Buttons */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            {summary.healthStatus === 'healthy' ? (
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>You&apos;re on track</span>
-              </div>
-            ) : summary.healthStatus === 'needs_attention' ? (
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                <span>Your budget needs attention</span>
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold">
-                <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
-                <span>Critical financial situation</span>
-              </div>
-            )}
-            <span className="text-xs text-slate-400 font-medium">
-              {currentMonthName}
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <p className="text-xs text-slate-500">{currentMonthName}</p>
+          <h1 className="font-display text-3xl sm:text-4xl text-white mt-0.5">
             {getGreeting()}, {displayName}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Here&apos;s how your money is looking this month.
-          </p>
         </div>
 
         {/* Header Action Buttons */}
@@ -470,6 +447,82 @@ export function DashboardView({ initialData }: DashboardViewProps) {
           </button>
         </div>
       </div>
+
+
+      {/* Answers, at a glance: am I okay, and what do I do next */}
+      {(() => {
+        const tone = summary.healthStatus === 'healthy'
+          ? { label: "You're okay this month", dot: 'bg-emerald-400', text: 'text-emerald-400', ring: 'border-slate-800' }
+          : summary.healthStatus === 'needs_attention'
+          ? { label: 'Needs attention', dot: 'bg-amber-400', text: 'text-amber-400', ring: 'border-amber-500/30' }
+          : { label: 'Short this month', dot: 'bg-red-400', text: 'text-red-400', ring: 'border-red-500/30' };
+        const today = new Date().getDate();
+        const nextBill = bills
+          .filter((b) => !b.is_paid && !b.is_ignored)
+          .sort((x, y) => ((x.due_date - today + 31) % 31) - ((y.due_date - today + 31) % 31))[0];
+        const incomeFirst = pendingIncomes.length > 0 && currentIncome;
+        return (
+          <section className={`grid lg:grid-cols-2 gap-px rounded-3xl overflow-hidden border ${tone.ring} bg-slate-800/60`}>
+            <div className="bg-[#151513] p-5 sm:p-7">
+              <p className="text-xs text-slate-500 mb-3">Am I okay?</p>
+              <div className={`inline-flex items-center gap-2 text-sm font-medium ${tone.text}`}>
+                <span className={`w-2 h-2 rounded-full ${tone.dot}`} />
+                {tone.label}
+              </div>
+              <p className="mt-3 text-sm text-slate-300 leading-relaxed">{summary.healthReason}</p>
+              <div className="mt-6 grid grid-cols-3 gap-4">
+                {[
+                  ['Free to spend', summary.availableToSpendPaise, 'text-white'],
+                  ['Set aside', summary.totalReservedPaise, 'text-slate-200'],
+                  ['Bills ahead', summary.upcomingObligationsPaise, 'text-slate-200'],
+                ].map(([k, v, c]) => (
+                  <div key={k as string}>
+                    <div className="text-[11px] text-slate-500">{k}</div>
+                    <div className={`mt-1 font-display text-2xl sm:text-3xl tabular ${c}`}>{formatRupees(v as number)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-[#1a1a17] p-5 sm:p-7 flex flex-col">
+              <p className="text-xs text-slate-500 mb-3">What should I do next?</p>
+              <p className="text-lg sm:text-xl text-white leading-snug font-medium">
+                {incomeFirst
+                  ? `Confirm your ${currentIncome.name} of ${formatRupees(currentIncome.amount)} has arrived.`
+                  : summary.nextAction}
+              </p>
+              <div className="mt-auto pt-6 flex flex-wrap gap-2">
+                {incomeFirst ? (
+                  <button
+                    onClick={() => handleConfirmIncome(currentIncome)}
+                    className="h-11 px-5 rounded-full bg-emerald-400 text-emerald-950 text-sm font-medium hover:bg-emerald-300 transition-colors"
+                  >
+                    Yes, it arrived
+                  </button>
+                ) : nextBill ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setLoadingBillId(nextBill.id);
+                        await toggleBillPaidAction(nextBill.id, true);
+                        celebrate({ name: nextBill.name, amountPaise: nextBill.amount });
+                        router.refresh();
+                      } catch (e: any) {
+                        alert(e.message);
+                      } finally {
+                        setLoadingBillId(null);
+                      }
+                    }}
+                    disabled={loadingBillId === nextBill.id}
+                    className="h-11 px-5 rounded-full bg-emerald-400 text-emerald-950 text-sm font-medium hover:bg-emerald-300 disabled:opacity-60 transition-colors"
+                  >
+                    Mark {nextBill.name} paid
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Notification Toast if an action occurred */}
       {statusNotification && (
