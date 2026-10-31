@@ -24,7 +24,14 @@ export function Topbar({
   const router = useRouter();
   const [isResetting, setIsResetting] = useState(false);
 
+  const isArjun = userName.toLowerCase().includes('arjun');
+
   const handleResetArjun = async () => {
+    const confirmMsg = isArjun
+      ? "Reset Arjun's demo profile data to defaults?"
+      : "Load Arjun's demo profile? This will load the hackathon sample data (₹45,000 salary, ₹15,000 rent, ₹6,000 EMI).";
+    if (!confirm(confirmMsg)) return;
+
     try {
       setIsResetting(true);
       await seedArjunProfileAction();
@@ -76,11 +83,13 @@ export function Topbar({
         <button
           onClick={handleResetArjun}
           disabled={isResetting}
-          title="Reload Arjun's sample profile data for demo testing"
+          title={isArjun ? "Reset Arjun's sample profile data to defaults" : "Load Arjun's demo profile for hackathon evaluation"}
           className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-slate-300 bg-slate-900 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition-all shadow-sm"
         >
           <RotateCcw className={`w-3.5 h-3.5 text-emerald-400 ${isResetting ? 'animate-spin' : ''}`} />
-          <span className="hidden md:inline">Reset Arjun Profile</span>
+          <span className="hidden md:inline">
+            {isArjun ? "Reset Arjun's Profile" : "Load Arjun's Demo"}
+          </span>
         </button>
 
         {/* User Profile Pill */}
