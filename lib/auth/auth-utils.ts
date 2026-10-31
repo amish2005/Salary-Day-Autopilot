@@ -1,10 +1,34 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 
 export function isClerkConfigured(): boolean {
   const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
   const sk = process.env.CLERK_SECRET_KEY || '';
   return Boolean(pk && sk && pk.startsWith('pk_') && sk.startsWith('sk_'));
+}
+
+export async function getCurrentClerkUser() {
+  if (isClerkConfigured()) {
+    try {
+      const user = await currentUser();
+      if (user) {
+        const fullName =
+          [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+          user.username ||
+          user.emailAddresses?.[0]?.emailAddress?.split('@')[0] ||
+          '';
+        return {
+          userId: user.id,
+          fullName,
+          firstName: user.firstName || fullName.split(' ')[0] || '',
+          email: user.emailAddresses?.[0]?.emailAddress || '',
+        };
+      }
+    } catch (err) {
+      // Outside Clerk request scope or static generation
+    }
+  }
+  return null;
 }
 
 export async function getCurrentUserId(): Promise<string> {

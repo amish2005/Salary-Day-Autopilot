@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -62,8 +63,17 @@ interface DashboardViewProps {
 
 export function DashboardView({ initialData }: DashboardViewProps) {
   const router = useRouter();
+  const { user } = useUser();
   const { profile, bills, summary, incomeSources = [] } = initialData;
   const [loadingBillId, setLoadingBillId] = useState<string | null>(null);
+
+  // If user is logged into Clerk (e.g. Amish Sharma), use their authentic name over placeholder 'Arjun'
+  const displayName =
+    (profile.full_name && profile.full_name.toLowerCase() !== 'arjun' ? profile.full_name : '') ||
+    user?.fullName ||
+    user?.firstName ||
+    profile.full_name ||
+    'there';
 
   // Modals state
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
@@ -359,7 +369,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {getGreeting()}, {profile.full_name}
+            {getGreeting()}, {displayName}
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Here&apos;s how your money is looking this month.

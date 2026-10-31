@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import { ShieldAlert, ShieldCheck, AlertTriangle, RotateCcw, User, Sparkles, TrendingDown, ArrowRight } from 'lucide-react';
 import { seedArjunProfileAction, recordSalaryArrivalAction } from '@/app/actions/finance-actions';
 
@@ -22,9 +23,17 @@ export function Topbar({
   onOpenShortfallModal,
 }: TopbarProps) {
   const router = useRouter();
+  const { user } = useUser();
   const [isResetting, setIsResetting] = useState(false);
 
-  const isArjun = userName.toLowerCase().includes('arjun');
+  // If user is logged into Clerk (e.g. Amish Sharma), use their authentic name
+  const effectiveName =
+    (userName && userName.toLowerCase() !== 'arjun' ? userName : '') ||
+    user?.fullName ||
+    user?.firstName ||
+    userName;
+
+  const isArjun = effectiveName.toLowerCase().includes('arjun');
 
   const handleResetArjun = async () => {
     const confirmMsg = isArjun

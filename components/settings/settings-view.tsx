@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import {
   Settings,
   Save,
@@ -39,11 +40,23 @@ interface SettingsViewProps {
 
 export function SettingsView({ profile, transactions, bills }: SettingsViewProps) {
   const router = useRouter();
+  const { user } = useUser();
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Profile Form State
-  const [fullName, setFullName] = useState(profile.full_name);
+  // Profile Form State: If user is logged in as Amish Sharma in Clerk but profile has 'Arjun', use Clerk name
+  const effectiveInitialName =
+    profile.full_name && profile.full_name.toLowerCase() !== 'arjun'
+      ? profile.full_name
+      : user?.fullName || profile.full_name;
+
+  const [fullName, setFullName] = useState(effectiveInitialName);
+
+  useEffect(() => {
+    if (user?.fullName && fullName.toLowerCase() === 'arjun') {
+      setFullName(user.fullName);
+    }
+  }, [user?.fullName]);
   const [city, setCity] = useState(profile.city);
   const [salaryRupees, setSalaryRupees] = useState(String(profile.monthly_salary / 100));
   const [salaryDate, setSalaryDate] = useState(String(profile.salary_date));

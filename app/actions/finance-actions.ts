@@ -1,6 +1,7 @@
 'use server';
 
-import { getCurrentUserId } from '@/lib/auth/auth-utils';
+import { getCurrentUserId, getCurrentClerkUser } from '@/lib/auth/auth-utils';
+import { cookies } from 'next/headers';
 import * as repo from '@/lib/db/repository';
 import { buildFinancialSummary } from '@/lib/finance/financial-summary';
 import { analyzeUnexpectedExpense } from '@/lib/finance/emergency-engine';
@@ -11,22 +12,78 @@ import { revalidatePath } from 'next/cache';
 
 /**
  * Loads the complete financial state for the current authenticated user.
- * Auto-initializes Arjun's demo profile if the user profile does not exist yet.
+ * Auto-initializes or synchronizes the profile with the user's authentic identity.
  */
 export async function getCompleteFinancialDataAction() {
   const userId = await getCurrentUserId();
+  const clerkUser = await getCurrentClerkUser();
   let profile = await repo.getProfile(userId);
 
+  // Check if there is an existing guest/onboarding session cookie to migrate into this authenticated account
+  let guestCookie: string | undefined;
+  try {
+    const cookieStore = await cookies();
+    guestCookie = cookieStore.get('salary_autopilot_user_id')?.value;
+  } catch {}
+
+  // If user is authenticated in Clerk and previously set up a custom profile as guest
+  if (guestCookie && guestCookie !== userId && (!profile || profile.full_name === 'Arjun' || profile.monthly_salary === 4500000)) {
+    const guestProfile = await repo.getProfile(guestCookie);
+    if (guestProfile && (guestProfile.full_name !== 'Arjun' || guestProfile.monthly_salary !== 4500000)) {
+      profile = await repo.upsertProfile(userId, {
+        ...guestProfile,
+        user_id: userId,
+        full_name: clerkUser?.fullName || guestProfile.full_name,
+      });
+
+      // Migrate any custom bills configured by the user
+      const guestBills = await repo.getBills(guestCookie);
+      const userBills = await repo.getBills(userId);
+      if (guestBills.length > 0 && userBills.length <= 4) {
+        for (const b of userBills) {
+          await repo.deleteBill(userId, b.id);
+        }
+        for (const b of guestBills) {
+          await repo.addBill(userId, {
+            name: b.name,
+            amount: b.amount,
+            paid_amount: b.paid_amount,
+            due_date: b.due_date,
+            recurrence: b.recurrence,
+            annual_month: b.annual_month,
+            category: b.category,
+            priority: b.priority,
+            autopay: b.autopay,
+            is_paid: b.is_paid,
+            is_ignored: b.is_ignored,
+          });
+        }
+      }
+    }
+  }
+
+  // If profile still doesn't exist, create it
   if (!profile) {
     await repo.seedArjunProfile(userId);
-    profile = await repo.getProfile(userId);
+    if (clerkUser && clerkUser.fullName) {
+      profile = await repo.upsertProfile(userId, {
+        full_name: clerkUser.fullName,
+      });
+    } else {
+      profile = await repo.getProfile(userId);
+    }
+  } else if (clerkUser && clerkUser.fullName && (profile.full_name === 'Arjun' || !profile.full_name)) {
+    // Self-healing: user logged in via Clerk as Amish Sharma, replace placeholder 'Arjun'
+    profile = await repo.upsertProfile(userId, {
+      full_name: clerkUser.fullName,
+    });
   }
 
   if (!profile) {
     profile = {
       id: `prof-${userId}`,
       user_id: userId,
-      full_name: 'Arjun',
+      full_name: clerkUser?.fullName || 'Amish Sharma',
       city: 'Chennai',
       currency: 'INR',
       monthly_salary: 4500000,

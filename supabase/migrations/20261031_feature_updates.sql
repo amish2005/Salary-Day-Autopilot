@@ -33,3 +33,4 @@ CREATE TABLE IF NOT EXISTS savings_contributions (
 -- Done! All features (Autopay, Partial Pay, Ignored Bills, Savings Targets,
 -- and Emergency Savings Withdrawals) are supported natively in Supabase.
 -- ==============================================================================
+
