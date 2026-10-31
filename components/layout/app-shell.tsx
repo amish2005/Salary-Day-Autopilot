@@ -5,7 +5,7 @@ import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { MobileNav } from './mobile-nav';
 import { DemoTesterModal } from '@/components/demo/demo-tester-modal';
-import { Sparkles, Beaker } from 'lucide-react';
+import { Beaker } from 'lucide-react';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -23,16 +23,16 @@ export function AppShell({
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#090d16] text-slate-100">
+    <div className="flex min-h-screen bg-[#0c0c0b] text-slate-100">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 pb-16 lg:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 pb-24 lg:pb-0">
         <Topbar
           healthStatus={healthStatus}
           healthReason={healthReason}
           userName={userName}
           onOpenShortfallModal={() => setIsDemoModalOpen(true)}
         />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 px-4 py-5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
         <MobileNav />
@@ -41,7 +41,7 @@ export function AppShell({
       {/* Floating Demo Scenarios Button for Judges */}
       <button
         onClick={() => setIsDemoModalOpen(true)}
-        className="fixed bottom-20 lg:bottom-6 right-6 z-50 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs shadow-xl shadow-emerald-500/25 transition-transform hover:scale-105"
+        className="fixed bottom-24 lg:bottom-6 right-4 sm:right-6 z-50 flex items-center gap-2 h-10 px-3 sm:px-4 rounded-full bg-slate-100 hover:bg-white text-slate-950 font-medium text-xs transition-colors"
         title="Open Hackathon Edge Case Simulator"
       >
         <Beaker className="w-4 h-4 text-slate-950" />

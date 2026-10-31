@@ -263,7 +263,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
       )}
 
       {/* 1. Profile Preferences Form */}
-      <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl">
+      <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl">
         <h2 className="text-base font-bold text-white mb-4">Salary &amp; Profile Preferences</h2>
 
         <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -341,7 +341,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors shadow-md shadow-emerald-500/20"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors"
             >
               <Save className="w-4 h-4" />
               <span>{loading ? 'Saving...' : 'Save Profile Preferences'}</span>
@@ -351,7 +351,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
       </div>
 
       {/* 2. Scheduled Bills & Regular Payments Manager (User-Requested) */}
-      <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl space-y-4">
+      <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div>
             <h2 className="text-base font-bold text-white">Scheduled Bills &amp; Regular Payments</h2>
@@ -473,7 +473,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
 
       {/* 3. CSV Data Export & System Diagnostics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl flex flex-col justify-between">
+        <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-white mb-1">Export Financial Data</h3>
             <p className="text-xs text-slate-400 mb-4">
@@ -489,7 +489,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
           </button>
         </div>
 
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl flex flex-col justify-between">
+        <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-white mb-1">Load Arjun Demo Profile</h3>
             <p className="text-xs text-slate-400 mb-4">
@@ -530,7 +530,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
       {/* MODAL 1: Add New Bill Payment */}
       {isAddBillOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
             <button
               onClick={() => setIsAddBillOpen(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -659,7 +659,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
       {/* MODAL 2: Edit Bill & Due Date */}
       {editBill && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
             <button
               onClick={() => setEditBill(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"

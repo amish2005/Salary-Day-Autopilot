@@ -18,8 +18,8 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#090d16]/95 backdrop-blur-lg border-t border-slate-800/90 px-3 py-2">
-      <div className="flex items-center justify-around">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0c0c0b]/95 backdrop-blur border-t border-slate-800/70 safe-bottom">
+      <div className="grid grid-cols-6 px-1">
         {mobileLinks.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -27,11 +27,13 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
-                isActive ? 'text-emerald-400 font-semibold' : 'text-slate-400 hover:text-slate-200'
+              className={`flex flex-col items-center gap-1 pt-2.5 pb-2 text-[10px] transition-colors ${
+                isActive ? 'text-white' : 'text-slate-500'
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <span className={`h-7 w-11 rounded-full grid place-items-center transition-colors ${isActive ? 'bg-emerald-400 text-emerald-950' : ''}`}>
+                <Icon className="w-[18px] h-[18px]" />
+              </span>
               <span>{item.name}</span>
             </Link>
           );
@@ -40,4 +42,3 @@ export function MobileNav() {
     </nav>
   );
 }
-

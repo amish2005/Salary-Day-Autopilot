@@ -115,7 +115,7 @@ export function SpendingView({ summary, transactions, creditCards }: SpendingVie
           )}
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs transition-colors shadow-md shadow-emerald-500/20"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>Record Expense</span>
@@ -131,7 +131,7 @@ export function SpendingView({ summary, transactions, creditCards }: SpendingVie
         return (
           <div
             key={card.id}
-            className="p-6 rounded-2xl bg-gradient-to-r from-[#141b2d] to-[#0f172a] border border-slate-800 shadow-xl"
+            className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-4">
               <div className="flex items-center gap-3">
@@ -188,7 +188,7 @@ export function SpendingView({ summary, transactions, creditCards }: SpendingVie
       })}
 
       {/* Recent Transactions List */}
-      <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl">
+      <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl">
         <h2 className="text-base font-bold text-white mb-4">Transaction History</h2>
 
         {transactions.length === 0 ? (
@@ -235,7 +235,7 @@ export function SpendingView({ summary, transactions, creditCards }: SpendingVie
       {/* Record Expense Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setIsAddModalOpen(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -331,7 +331,7 @@ export function SpendingView({ summary, transactions, creditCards }: SpendingVie
       {/* Case 3: Emergency Expense Warning Modal */}
       {warningModalData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-red-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-red-500/50 rounded-2xl max-w-lg w-full p-6 relative">
             <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
               <ShieldAlert className="w-6 h-6" />
             </div>
@@ -387,7 +387,7 @@ export function SpendingView({ summary, transactions, creditCards }: SpendingVie
       {/* Pay Credit Card Modal */}
       {isCardPayOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setIsCardPayOpen(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"

@@ -22,9 +22,9 @@ export default function SignInPage() {
 
   if (hasClerkKey) {
     return (
-      <div className="min-h-screen bg-[#090d16] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0c0c0b] flex flex-col items-center justify-center p-4">
         <Link href="/" className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-950/40">
+          <div className="w-10 h-10 rounded-xl bg-emerald-400 flex items-center justify-center text-slate-950 font-bold">
             <ShieldCheck className="w-6 h-6 text-slate-950" />
           </div>
           <div>
@@ -40,7 +40,7 @@ export default function SignInPage() {
           fallbackRedirectUrl="/dashboard"
           appearance={{
             elements: {
-              card: 'bg-[#0f172a] border border-slate-800 shadow-2xl rounded-2xl',
+              card: 'bg-[#151513] border border-slate-800 shadow-2xl rounded-2xl',
               headerTitle: 'text-white font-bold',
               headerSubtitle: 'text-slate-400 text-xs',
               formButtonPrimary: 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold',
@@ -64,9 +64,9 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#090d16] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-[#0f172a] border border-slate-800 rounded-2xl p-8 shadow-2xl text-center">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-slate-950 font-bold mx-auto mb-4 shadow-xl shadow-emerald-500/20">
+    <div className="min-h-screen bg-[#0c0c0b] flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-[#151513] border border-slate-800 rounded-2xl p-8 shadow-2xl text-center">
+        <div className="w-12 h-12 rounded-2xl bg-emerald-400 flex items-center justify-center text-slate-950 font-bold mx-auto mb-4">
           <ShieldCheck className="w-7 h-7 text-slate-950" />
         </div>
         <h1 className="text-xl font-bold text-white mb-2">Welcome Back</h1>
@@ -77,7 +77,7 @@ export default function SignInPage() {
         <div className="space-y-4">
           <button
             onClick={handleDemoSignIn}
-            className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20"
+            className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm flex items-center justify-center gap-2 transition-all"
           >
             <span>Log in as Arjun (Demo)</span>
             <ArrowRight className="w-4 h-4" />
@@ -88,7 +88,7 @@ export default function SignInPage() {
               <div className="w-full border-t border-slate-800" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#0f172a] px-2 text-slate-500">or email</span>
+              <span className="bg-[#151513] px-2 text-slate-500">or email</span>
             </div>
           </div>
 

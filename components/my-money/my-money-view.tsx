@@ -62,7 +62,7 @@ export function MyMoneyView({ summary, incomeSources }: MyMoneyViewProps) {
 
       {/* Top Cards: Bank Cash vs Virtual Envelopes */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800">
+        <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Actual Bank Balance
@@ -77,7 +77,7 @@ export function MyMoneyView({ summary, incomeSources }: MyMoneyViewProps) {
           </span>
         </div>
 
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800">
+        <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Virtual Envelope Allocations
@@ -92,7 +92,7 @@ export function MyMoneyView({ summary, incomeSources }: MyMoneyViewProps) {
           </span>
         </div>
 
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800">
+        <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Flexible Spending
@@ -109,7 +109,7 @@ export function MyMoneyView({ summary, incomeSources }: MyMoneyViewProps) {
       </div>
 
       {/* Salary Arrival Record / Shortfall Adjuster */}
-      <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl">
+      <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-white">Record Monthly Salary Credit</h2>
@@ -154,7 +154,7 @@ export function MyMoneyView({ summary, incomeSources }: MyMoneyViewProps) {
       </div>
 
       {/* Income Sources Table */}
-      <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl">
+      <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl">
         <h2 className="text-base font-bold text-white mb-4">Income Sources</h2>
         <div className="divide-y divide-slate-800/80">
           {incomeSources.map((source) => (
@@ -194,7 +194,7 @@ export function MyMoneyView({ summary, incomeSources }: MyMoneyViewProps) {
       </div>
 
       {/* Virtual Money Envelopes Complete Breakdown */}
-      <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl">
+      <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-white">Active Virtual Envelopes</h2>

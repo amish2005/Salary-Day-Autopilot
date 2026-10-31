@@ -1,11 +1,18 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter_Tight, Geist_Mono, Instrument_Serif } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/auth/auth-provider';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const interTight = Inter_Tight({
+  variable: '--font-inter-tight',
   subsets: ['latin'],
+});
+
+const instrumentSerif = Instrument_Serif({
+  variable: '--font-instrument-serif',
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
 });
 
 const geistMono = Geist_Mono({
@@ -25,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`}>
-      <body className="min-h-screen bg-[#090d16] text-slate-100 antialiased selection:bg-emerald-500/20 selection:text-emerald-300">
+    <html lang="en" className={`${interTight.variable} ${geistMono.variable} ${instrumentSerif.variable} dark`}>
+      <body className="min-h-screen bg-[#0c0c0b] text-slate-100 antialiased selection:bg-emerald-500/20 selection:text-emerald-300">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

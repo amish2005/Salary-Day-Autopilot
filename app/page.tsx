@@ -1,262 +1,122 @@
 import React from 'react';
 import Link from 'next/link';
-import {
-  ShieldCheck,
-  ArrowRight,
-  Sparkles,
-  Zap,
-  TrendingDown,
-  Calendar,
-  Lock,
-  PieChart,
-  CheckCircle2,
-  Users,
-  AlertTriangle,
-} from 'lucide-react';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
+
+const steps = [
+  { n: '01', t: 'Salary lands', d: 'Record what actually arrived. Autopilot adjusts for weekends, holidays and shortfalls.' },
+  { n: '02', t: 'Bills get locked first', d: 'Rent and EMI are set aside before anything else can touch the money.' },
+  { n: '03', t: 'Yearly costs, spread out', d: 'Insurance and annual dues are split across months, so February never ambushes you.' },
+  { n: '04', t: 'One honest number', d: 'A daily limit in rupees. Stay under it and every bill still gets paid on time.' },
+];
+
+const problems = [
+  { t: 'Rent is on the 1st. Salary is on the 7th.', d: 'You spend early because the balance looks fine, then the bills show up.' },
+  { t: 'A surprise ₹12,000 hospital visit.', d: 'You need to know what to trim before the EMI bounces, not after.' },
+  { t: 'Money that has not arrived yet.', d: 'A roommate’s share is not income until it lands. Annual costs should not be forgotten.' },
+];
+
+const sample: [string, string, string, boolean][] = [
+  ['House rent', '1st', '₹15,000', true],
+  ['Bike EMI', '5th', '₹6,000', false],
+  ['Phone & internet', '12th', '₹1,000', false],
+];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 selection:bg-emerald-500/20 selection:text-emerald-300">
-      {/* Navigation */}
-      <header className="sticky top-0 z-40 bg-[#090d16]/80 backdrop-blur-md border-b border-slate-800/80 px-6 lg:px-12 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-950/40 group-hover:scale-105 transition-transform">
-              <ShieldCheck className="w-6 h-6 text-slate-950" />
-            </div>
-            <div>
-              <div className="font-semibold text-slate-100 text-base tracking-tight">
-                Salary Day Autopilot
-              </div>
-              <div className="text-[11px] text-slate-400">Fintech SaaS Platform</div>
-            </div>
+    <div className="min-h-dvh bg-[#0c0c0b] text-slate-100">
+      <header className="sticky top-0 z-40 bg-[#0c0c0b]/85 backdrop-blur border-b border-slate-800/70">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-5 sm:px-8 h-16">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-full bg-emerald-400 grid place-items-center">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#0c0c0b]" />
+            </span>
+            <span className="font-semibold tracking-tight text-[15px]">Salary Day</span>
           </Link>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-900 transition-colors"
-            >
-              Demo Dashboard
+          <nav className="flex items-center gap-1 sm:gap-2 text-sm">
+            <Link href="/sign-in" className="hidden sm:block px-3 py-2 text-slate-300 hover:text-white">Log in</Link>
+            <Link href="/dashboard" className="px-3 py-2 text-slate-300 hover:text-white">Demo</Link>
+            <Link href="/onboarding" className="ml-1 inline-flex items-center h-9 px-4 rounded-full bg-emerald-400 text-emerald-950 font-medium hover:bg-emerald-300 transition-colors">
+              Get started
             </Link>
-            <Link
-              href="/sign-in"
-              className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-900 transition-colors hidden sm:inline-block"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/onboarding"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 transition-all hover:scale-105"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          </nav>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-16 pb-20 px-6 lg:px-12 max-w-7xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Intelligent Salary Allocation Engine</span>
-        </div>
+      <main>
+        <section className="max-w-6xl mx-auto px-5 sm:px-8 pt-14 sm:pt-24 pb-16 grid lg:grid-cols-[1.15fr_1fr] gap-12 lg:gap-16 items-center">
+          <div>
+            <p className="text-sm text-slate-400 mb-5">For people paid once a month</p>
+            <h1 className="font-display text-[44px] sm:text-7xl leading-[0.98] text-white">
+              Know what you can spend, <em className="text-emerald-400">before</em> the 20th.
+            </h1>
+            <p className="mt-6 text-base sm:text-lg text-slate-400 max-w-xl leading-relaxed">
+              Salary Day Autopilot sets aside rent, EMIs and savings the moment your salary arrives, then tells you
+              exactly how much is left to spend today.
+            </p>
+            <div className="mt-9 flex flex-col sm:flex-row gap-3">
+              <Link href="/onboarding" className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full bg-emerald-400 text-emerald-950 font-medium hover:bg-emerald-300 transition-colors">
+                Set up my month <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full border border-slate-700 text-slate-200 hover:bg-slate-900 transition-colors">
+                See a live example <ArrowUpRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
 
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.15] mb-6">
-          Your salary deserves <br />
-          <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-            a better plan.
-          </span>
-        </h1>
+          <div className="rounded-3xl bg-[#151513] border border-slate-800 p-5 sm:p-7">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>Safe to spend today</span>
+              <span className="inline-flex items-center gap-1.5 text-emerald-400"><i className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Bills protected</span>
+            </div>
+            <div className="mt-3 font-display text-6xl sm:text-7xl text-white tabular">₹384</div>
+            <p className="mt-1 text-sm text-slate-400">₹8,450 free this month, 22 days to go</p>
+            <div className="mt-7 rounded-2xl overflow-hidden border border-slate-800 divide-y divide-slate-800">
+              {sample.map(([n, d, a, done]) => (
+                <div key={n} className="flex items-center gap-3 px-4 py-3.5 bg-[#12120f]">
+                  <span className={`w-5 h-5 rounded-full grid place-items-center text-[10px] ${done ? 'bg-emerald-400 text-emerald-950' : 'border border-slate-600'}`}>{done ? '✓' : ''}</span>
+                  <span className="flex-1 text-sm">{n}</span>
+                  <span className="text-xs text-slate-500">{d}</span>
+                  <span className="text-sm tabular w-20 text-right">{a}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Salary Day Autopilot takes care of your bills, spending, savings, and unexpected expenses
-          so you never have to wonder where your money went.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto mb-16">
-          <Link
-            href="/onboarding"
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl font-semibold text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all hover:scale-105"
-          >
-            <span>Start managing my salary</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link
-            href="/dashboard"
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl font-semibold text-sm bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-slate-200 flex items-center justify-center gap-2 transition-all"
-          >
-            <span>Explore how it works</span>
-          </Link>
-        </div>
-
-        {/* Hero Visual Card Preview */}
-        <div className="max-w-4xl mx-auto bg-[#0f172a] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl text-left relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-slate-800 gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 mb-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>Financial Health: Healthy</span>
+        <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-24 border-t border-slate-800/70">
+          <h2 className="font-display text-4xl sm:text-5xl text-white max-w-2xl">Why the money runs out early</h2>
+          <div className="mt-10 grid md:grid-cols-3 gap-px bg-slate-800/70 rounded-2xl overflow-hidden border border-slate-800/70">
+            {problems.map((p) => (
+              <div key={p.t} className="bg-[#0c0c0b] p-6 sm:p-8">
+                <h3 className="text-lg font-medium text-white leading-snug">{p.t}</h3>
+                <p className="mt-3 text-sm text-slate-400 leading-relaxed">{p.d}</p>
               </div>
-              <h3 className="text-xl font-bold text-white">Good afternoon, Arjun</h3>
-              <p className="text-xs text-slate-400">All essential bills are locked and protected until next salary.</p>
-            </div>
-            <div className="px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300">
-              Expected Salary: <strong className="text-white">7th of month</strong>
-            </div>
+            ))}
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <span className="text-xs text-slate-400 block mb-1">Available to Spend</span>
-              <div className="text-2xl font-bold text-white">₹8,450</div>
-              <span className="text-[11px] text-emerald-400 mt-1 block">₹384 daily allowance</span>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <span className="text-xs text-slate-400 block mb-1">Total Protected Reserves</span>
-              <div className="text-2xl font-bold text-emerald-400">₹35,400</div>
-              <span className="text-[11px] text-slate-400 mt-1 block">Rent, EMI, Utilities, Food</span>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <span className="text-xs text-slate-400 block mb-1">Laptop Savings Goal</span>
-              <div className="text-2xl font-bold text-blue-400">₹12,000</div>
-              <span className="text-[11px] text-slate-400 mt-1 block">₹48,000 left for April</span>
-            </div>
-          </div>
+        <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-24 border-t border-slate-800/70">
+          <h2 className="font-display text-4xl sm:text-5xl text-white max-w-2xl">How it works</h2>
+          <ol className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10">
+            {steps.map((s) => (
+              <li key={s.n}>
+                <span className="text-sm text-emerald-400 tabular">{s.n}</span>
+                <h3 className="mt-2 text-lg font-medium text-white">{s.t}</h3>
+                <p className="mt-2 text-sm text-slate-400 leading-relaxed">{s.d}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
 
-          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="text-xs text-emerald-200">
-                <strong>Next Action:</strong> Pay your bike EMI of ₹6,000 by November 5th.
-              </span>
-            </div>
-            <Link href="/dashboard" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline shrink-0">
-              View live dashboard &rarr;
+        <section className="max-w-6xl mx-auto px-5 sm:px-8 pb-20">
+          <div className="rounded-3xl bg-emerald-400 text-emerald-950 p-8 sm:p-14 flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <h2 className="font-display text-4xl sm:text-6xl leading-none max-w-xl">Give every rupee a job.</h2>
+            <Link href="/onboarding" className="inline-flex items-center justify-center gap-2 h-12 px-7 rounded-full bg-[#0c0c0b] text-white font-medium hover:bg-black transition-colors shrink-0">
+              Get started <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* The Problem Section */}
-      <section className="py-16 px-6 lg:px-12 max-w-6xl mx-auto border-t border-slate-800/80">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-            Why young professionals run out of money by the 20th
-          </h2>
-          <p className="text-sm text-slate-400 max-w-xl mx-auto">
-            Traditional budgeting apps force you to categorize receipts or stare at useless pie charts.
-            Real life happens in cycles.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-white mb-2">Mismatched Timelines</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Rent is due on the 1st, but your salary doesn&apos;t arrive until the 7th. You spend early thinking you have cash, then struggle when bills hit.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
-              <TrendingDown className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-white mb-2">Salary Shortfalls &amp; Surprises</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Took unpaid leaves? A sudden ₹12,000 hospital visit? You need to know instantly what discretionary spending to trim before your EMI bounces.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
-              <Users className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-white mb-2">Roommate &amp; Annual Lags</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Expected money (like roommate contributions) shouldn&apos;t be counted until received. And annual expenses like bike insurance shouldn&apos;t be forgotten.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* How Autopilot Works */}
-      <section className="py-16 px-6 lg:px-12 max-w-6xl mx-auto border-t border-slate-800/80">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-            How Autopilot Works
-          </h2>
-          <p className="text-sm text-slate-400 max-w-xl mx-auto">
-            A deterministic financial engine running on code, not guesswork.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 text-left">
-            <span className="text-2xl font-black text-emerald-400 block mb-2">01</span>
-            <h4 className="text-sm font-bold text-white mb-1.5">Salary Arrival</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Autopilot records exact incoming funds and automatically adjusts for weekend holidays and shortfalls.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 text-left">
-            <span className="text-2xl font-black text-emerald-400 block mb-2">02</span>
-            <h4 className="text-sm font-bold text-white mb-1.5">Priority Envelopes</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Virtual reserves lock Rent and Bike EMI first. Essential bills are 100% guarded against overspending.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 text-left">
-            <span className="text-2xl font-black text-emerald-400 block mb-2">03</span>
-            <h4 className="text-sm font-bold text-white mb-1.5">Annual Amortization</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Bike insurance and recurring dues are amortized monthly so February never catches you unprepared.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 text-left">
-            <span className="text-2xl font-black text-emerald-400 block mb-2">04</span>
-            <h4 className="text-sm font-bold text-white mb-1.5">Safe-to-Spend</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              You get a real daily spending limit in rupees. If you spend within it, all your bills are paid on time.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Footer */}
-      <section className="py-20 px-6 lg:px-12 max-w-4xl mx-auto text-center">
-        <div className="p-10 rounded-3xl bg-gradient-to-b from-[#0f172a] to-[#090d16] border border-emerald-500/20 shadow-2xl relative">
-          <h2 className="text-3xl font-extrabold text-white mb-4">
-            Take control of your salary today.
-          </h2>
-          <p className="text-sm text-slate-400 max-w-lg mx-auto mb-8">
-            Experience the peace of mind that comes from knowing every rupee has a job before you spend it.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/onboarding"
-              className="px-6 py-3 rounded-xl font-semibold text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all hover:scale-105"
-            >
-              Start with Arjun&apos;s Profile
-            </Link>
-            <Link
-              href="/dashboard"
-              className="px-6 py-3 rounded-xl font-semibold text-sm bg-slate-800 hover:bg-slate-700 text-white transition-colors"
-            >
-              Open Live Dashboard
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      </main>
     </div>
   );
 }

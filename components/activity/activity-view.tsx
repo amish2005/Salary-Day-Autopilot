@@ -52,7 +52,7 @@ export function ActivityView({ activities }: ActivityViewProps) {
         </p>
       </div>
 
-      <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl">
+      <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl">
         {activities.length === 0 ? (
           <p className="text-xs text-slate-500 text-center py-8">
             No activities logged yet.

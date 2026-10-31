@@ -218,7 +218,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
 
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors self-start sm:self-auto shadow-md shadow-emerald-500/20"
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           <span>+ Add New Savings Goal</span>
@@ -258,7 +258,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
       {/* Goals Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {savingsGoals.length === 0 ? (
-          <div className="col-span-2 p-10 text-center rounded-2xl bg-[#0f172a] border border-slate-800 text-slate-400 text-xs">
+          <div className="col-span-2 p-10 text-center rounded-2xl bg-[#151513] border border-slate-800 text-slate-400 text-xs">
             No savings goals created yet. Click &quot;+ Add New Savings Goal&quot; above to start tracking your targets.
           </div>
         ) : (
@@ -270,8 +270,8 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
             return (
               <div
                 key={goal.id}
-                className={`p-6 rounded-2xl bg-[#0f172a] border transition-all flex flex-col justify-between ${
-                  goal.is_paused ? 'border-slate-800/60 opacity-80' : 'border-slate-800 shadow-xl hover:border-slate-700'
+                className={`p-6 rounded-2xl bg-[#151513] border transition-all flex flex-col justify-between ${
+                  goal.is_paused ? 'border-slate-800/60 opacity-80' : 'border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div>
@@ -342,7 +342,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
 
                     <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-teal-400 transition-all duration-500"
+                        className="h-full rounded-full bg-emerald-400 transition-all duration-500"
                         style={{ width: `${progressPercent}%` }}
                       />
                     </div>
@@ -383,7 +383,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
                       setDepositModalGoal(goal);
                       setDepositAmountRupees(monthlyPlanPaise > 0 ? String(monthlyPlanPaise / 100) : '2000');
                     }}
-                    className="py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
+                    className="py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
                   >
                     <ArrowDownRight className="w-4 h-4" />
                     <span>+ Save Extra</span>
@@ -419,7 +419,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
       {/* MODAL 1: Deposit / Save Extra Modal */}
       {depositModalGoal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setDepositModalGoal(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -514,7 +514,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
                 <button
                   type="submit"
                   disabled={loadingId === 'deposit' || !depositAmountRupees}
-                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shadow-md shadow-emerald-500/20"
+                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors"
                 >
                   {loadingId === 'deposit' ? 'Saving...' : 'Confirm Deposit'}
                 </button>
@@ -527,7 +527,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
       {/* MODAL 2: Withdraw Funds to Bank Balance (For Pending Payments / Emergencies) */}
       {withdrawModalGoal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setWithdrawModalGoal(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -646,7 +646,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
       {/* MODAL 3: Add New Savings Goal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setIsAddModalOpen(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -731,7 +731,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
                 <button
                   type="submit"
                   disabled={loadingId === 'add'}
-                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shadow-md shadow-emerald-500/20"
+                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors"
                 >
                   {loadingId === 'add' ? 'Creating...' : 'Create Goal'}
                 </button>
@@ -744,7 +744,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
       {/* MODAL 4: Edit Goal Details & Monthly Plan */}
       {editModalGoal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setEditModalGoal(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -816,7 +816,7 @@ export function SavingsView({ summary, savingsGoals, bills = [] }: SavingsViewPr
                 <button
                   type="submit"
                   disabled={loadingId === 'edit'}
-                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors shadow-md shadow-emerald-500/20"
+                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors"
                 >
                   {loadingId === 'edit' ? 'Saving...' : 'Save Changes'}
                 </button>

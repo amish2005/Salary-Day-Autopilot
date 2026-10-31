@@ -79,7 +79,7 @@ export function Topbar({
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8 py-3.5 bg-[#090d16]/90 backdrop-blur-md border-b border-slate-800/80">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-8 py-3 bg-[#0c0c0b]/85 backdrop-blur border-b border-slate-800/70">
       <div className="flex items-center gap-3">
         {getStatusBadge()}
         <span className="hidden sm:inline text-xs text-slate-400 truncate max-w-[280px]">
@@ -93,7 +93,7 @@ export function Topbar({
           onClick={handleResetArjun}
           disabled={isResetting}
           title={isArjun ? "Reset Arjun's sample profile data to defaults" : "Load Arjun's demo profile for hackathon evaluation"}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg text-slate-300 bg-slate-900 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition-all shadow-sm"
+          className="flex items-center gap-1.5 h-9 px-2.5 text-xs font-medium rounded-full text-slate-300 border border-slate-700/80 hover:bg-slate-900 hover:text-white transition-colors"
         >
           <RotateCcw className={`w-3.5 h-3.5 text-emerald-400 ${isResetting ? 'animate-spin' : ''}`} />
           <span className="hidden md:inline">

@@ -1,5 +1,6 @@
 'use client';
 
+import { usePaidTicket } from '@/components/ui/paid-ticket';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -37,6 +38,7 @@ interface BillsViewProps {
 
 export function BillsView({ bills }: BillsViewProps) {
   const router = useRouter();
+  const { celebrate, node: paidTicket } = usePaidTicket();
   const [filter, setFilter] = useState<'all' | 'unpaid' | 'paid' | 'ignored'>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -82,6 +84,8 @@ export function BillsView({ bills }: BillsViewProps) {
     try {
       setLoadingId(billId);
       await toggleBillPaidAction(billId, !currentPaid);
+      const bill = bills.find((b) => b.id === billId);
+      if (!currentPaid && bill) celebrate({ name: bill.name, amountPaise: bill.amount });
       router.refresh();
     } catch (e: any) {
       alert(e.message);
@@ -100,6 +104,12 @@ export function BillsView({ bills }: BillsViewProps) {
       await recordBillPaymentAction({
         billId: paymentModalBill.id,
         amountPaidPaise: paidPaise,
+      });
+      const due = paymentModalBill.amount - (paymentModalBill.paid_amount || 0);
+      celebrate({
+        name: paymentModalBill.name,
+        amountPaise: paidPaise,
+        note: paidPaise >= due ? 'Paid in full' : 'Part payment',
       });
       setPaymentModalBill(null);
       setPaymentInput('');
@@ -226,6 +236,7 @@ export function BillsView({ bills }: BillsViewProps) {
 
   return (
     <div className="space-y-6">
+      {paidTicket}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Bills &amp; Payments</h1>
@@ -236,7 +247,7 @@ export function BillsView({ bills }: BillsViewProps) {
 
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs transition-colors self-start sm:self-auto shadow-md shadow-emerald-500/20"
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs transition-colors self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           <span>Add New Bill</span>
@@ -292,7 +303,7 @@ export function BillsView({ bills }: BillsViewProps) {
       {/* Bills List */}
       <div className="space-y-3">
         {filteredBills.length === 0 ? (
-          <div className="p-8 text-center rounded-2xl bg-[#0f172a] border border-slate-800 text-slate-400 text-xs">
+          <div className="p-8 text-center rounded-2xl bg-[#151513] border border-slate-800 text-slate-400 text-xs">
             No bills found in this view.
           </div>
         ) : (
@@ -305,7 +316,7 @@ export function BillsView({ bills }: BillsViewProps) {
             return (
               <div
                 key={bill.id}
-                className={`p-4 sm:p-5 rounded-2xl bg-[#0f172a] border transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                className={`p-4 sm:p-5 rounded-2xl bg-[#151513] border transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                   bill.is_ignored
                     ? 'border-slate-800/60 opacity-60 bg-slate-950/40'
                     : 'border-slate-800 hover:border-slate-700'
@@ -442,7 +453,7 @@ export function BillsView({ bills }: BillsViewProps) {
                       {/* Dropdown Menu */}
                       {isDropdownOpen && (
                         <div
-                          className="absolute right-0 top-8 z-30 w-48 rounded-xl bg-[#131b2e] border border-slate-700 shadow-2xl py-1 text-xs text-slate-200 animate-in fade-in zoom-in-95"
+                          className="absolute right-0 top-8 z-30 w-48 rounded-xl bg-[#171715] border border-slate-700 shadow-2xl py-1 text-xs text-slate-200 animate-in fade-in zoom-in-95"
                           onMouseLeave={() => setOpenDropdownId(null)}
                         >
                           {!bill.is_paid && !bill.is_ignored && (
@@ -506,7 +517,7 @@ export function BillsView({ bills }: BillsViewProps) {
       {/* MODAL 1: Partial / Exact Bill Payment Modal */}
       {paymentModalBill && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
             <button
               onClick={() => setPaymentModalBill(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -583,7 +594,7 @@ export function BillsView({ bills }: BillsViewProps) {
       {/* MODAL 2: Edit Bill Details Modal */}
       {editModalBill && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
             <button
               onClick={() => setEditModalBill(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -709,7 +720,7 @@ export function BillsView({ bills }: BillsViewProps) {
       {/* MODAL 3: Add Bill Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
             <button
               onClick={() => setIsAddModalOpen(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"

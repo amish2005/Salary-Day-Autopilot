@@ -1,5 +1,6 @@
 'use client';
 
+import { usePaidTicket } from '@/components/ui/paid-ticket';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -65,6 +66,7 @@ interface DashboardViewProps {
 
 export function DashboardView({ initialData }: DashboardViewProps) {
   const router = useRouter();
+  const { celebrate, node: paidTicket } = usePaidTicket();
   const { user } = useUser();
   const { profile, bills, summary, incomeSources = [], savingsGoals = [] } = initialData;
   const [loadingBillId, setLoadingBillId] = useState<string | null>(null);
@@ -317,6 +319,12 @@ export function DashboardView({ initialData }: DashboardViewProps) {
         billId: paymentModalBill.id,
         amountPaidPaise,
       });
+      const due = paymentModalBill.amount - (paymentModalBill.paid_amount || 0);
+      celebrate({
+        name: paymentModalBill.name,
+        amountPaise: amountPaidPaise,
+        note: amountPaidPaise >= due ? 'Paid in full' : 'Part payment',
+      });
       setPaymentModalBill(null);
       setPaymentAmountInput('');
       setStatusNotification(`Recorded payment of ${formatRupees(amountPaidPaise)} for "${paymentModalBill.name}".`);
@@ -399,6 +407,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
 
   return (
     <div className="space-y-6">
+      {paidTicket}
       {/* 1. Top Section Greeting & Quick Action Buttons */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
         <div>
@@ -480,7 +489,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
 
       {/* 2. Interactive Incoming Payments Carousel Banner */}
       {pendingIncomes.length > 0 && currentIncome ? (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#111a2f] via-[#0f172a] to-[#122234] border border-emerald-500/30 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#151513] border border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
           <div className="flex-1">
             <div className="flex items-center gap-2.5 mb-1.5">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30">
@@ -534,7 +543,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
             <button
               onClick={() => handleConfirmIncome(currentIncome)}
               disabled={isSubmitting}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 transition-all"
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all"
             >
               ✓ Yes, Received Full {formatRupees(currentIncome.amount)}
             </button>
@@ -616,7 +625,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* 3. Primary Financial Status Cards: Available To Spend & Next Action */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Available to Spend Card */}
-        <div className="lg:col-span-2 p-6 sm:p-7 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl relative overflow-hidden flex flex-col justify-between">
+        <div className="lg:col-span-2 p-6 sm:p-7 rounded-2xl bg-[#151513] border border-slate-800 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
           <div>
@@ -663,7 +672,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
         </div>
 
         {/* Next Action Card */}
-        <div className="p-6 sm:p-7 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl flex flex-col justify-between">
+        <div className="p-6 sm:p-7 rounded-2xl bg-[#151513] border border-slate-800 flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-4">
               <Zap className="w-4 h-4" />
@@ -692,7 +701,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       </div>
 
       {/* 4. Autopilot Decision Insight Bar */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#0b1220] border border-slate-800 flex items-center gap-3.5">
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#171715] border border-slate-800 flex items-center gap-3.5">
         <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
           <Sparkles className="w-4 h-4" />
         </div>
@@ -709,7 +718,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* 5. Mid Section: Scheduled Bills & Priorities + Virtual Money Envelopes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Scheduled Bills & Priorities */}
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl">
+        <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-white">Scheduled Bills &amp; Priorities</h2>
@@ -808,6 +817,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
                           try {
                             setLoadingBillId(bill.id);
                             await toggleBillPaidAction(bill.id, !bill.is_paid);
+                            if (!bill.is_paid) celebrate({ name: bill.name, amountPaise: bill.amount });
                             router.refresh();
                           } catch (e: any) {
                             alert(e.message);
@@ -839,7 +849,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
 
                       {isDropdownOpen && (
                         <div
-                          className="absolute right-0 top-7 z-30 w-44 rounded-xl bg-[#131b2e] border border-slate-700 shadow-2xl py-1 text-xs text-slate-200 animate-in fade-in"
+                          className="absolute right-0 top-7 z-30 w-44 rounded-xl bg-[#171715] border border-slate-700 shadow-2xl py-1 text-xs text-slate-200 animate-in fade-in"
                           onMouseLeave={() => setOpenBillDropdownId(null)}
                         >
                           {!bill.is_paid && !bill.is_ignored && (
@@ -890,7 +900,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
         </div>
 
         {/* Virtual Money Envelopes */}
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl">
+        <div className="p-6 rounded-2xl bg-[#151513] border border-slate-800 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-white">Virtual Money Envelopes</h2>
@@ -943,7 +953,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* 6. Special Trackers: Roommate Contribution, Laptop Goal & Credit Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Secondary Income / Roommate Tracker */}
-        <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-[#151513] border border-slate-800 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
@@ -1033,7 +1043,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
         </div>
 
         {/* Dynamic Primary Savings Goal */}
-        <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-[#151513] border border-slate-800 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
@@ -1071,7 +1081,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
           <div className="flex items-center gap-2 mt-4">
             <button
               onClick={() => setIsAddSavingsModalOpen(true)}
-              className="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-1.5"
+              className="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Money</span>
@@ -1086,7 +1096,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
         </div>
 
         {/* Credit Card Liability Tracker */}
-        <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-[#151513] border border-slate-800 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
@@ -1117,7 +1127,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       </div>
 
       {/* 7. Bottom Section: Quick Links */}
-      <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-5 rounded-2xl bg-[#151513] border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-sm font-semibold text-white block">
             Need to see every rupee traced and accounted for?
@@ -1145,7 +1155,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* MODAL 1: Income Arrival / Salary Alteration Modal */}
       {activeIncomeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setActiveIncomeModal(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -1283,7 +1293,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* MODAL 2: Add New Income Source Modal */}
       {isAddIncomeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setIsAddIncomeModalOpen(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -1380,7 +1390,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* MODAL 3: Partial / Exact Bill Payment Modal (from dashboard) */}
       {paymentModalBill && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setPaymentModalBill(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
@@ -1442,7 +1452,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* MODAL 4: Surprise / Unexpected Expense Modal */}
       {isEmergencyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => {
                 setIsEmergencyModalOpen(false);
@@ -1576,7 +1586,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* Case 3: Emergency Expense Protected Reserve Warning Confirmation Modal */}
       {emergencyWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-red-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-red-500/50 rounded-2xl max-w-lg w-full p-6 relative">
             <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
               <ShieldAlert className="w-6 h-6" />
             </div>
@@ -1632,7 +1642,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
       {/* Quick Add Money to Savings Goal Modal */}
       {isAddSavingsModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+          <div className="bg-[#151513] border border-slate-800 rounded-2xl max-w-md w-full p-6 relative">
             <button
               onClick={() => {
                 setIsAddSavingsModalOpen(false);
@@ -1720,7 +1730,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
                 type="button"
                 disabled={isSubmitting || !savingsDepositInput || Number(savingsDepositInput) <= 0}
                 onClick={handleDepositSavings}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold transition-colors shadow-lg shadow-emerald-500/20"
+                className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold transition-colors"
               >
                 {isSubmitting ? 'Depositing...' : 'Confirm Deposit'}
               </button>
