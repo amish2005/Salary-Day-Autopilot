@@ -30,6 +30,7 @@ import {
   addBillAction,
   updateBillAction,
   deleteBillAction,
+  resetAndClearAllUserDataAction,
 } from '@/app/actions/finance-actions';
 
 interface SettingsViewProps {
@@ -216,6 +217,25 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
       router.refresh();
     } catch (e: any) {
       alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 8. Wipe & Empty All Data
+  const handleClearAllData = async () => {
+    if (
+      !confirm(
+        'Are you sure you want to COMPLETELY WIPE all data (bills, transactions, savings, profile) and start fresh? This cannot be undone.'
+      )
+    )
+      return;
+    try {
+      setLoading(true);
+      await resetAndClearAllUserDataAction();
+      router.push('/onboarding');
+    } catch (e: any) {
+      alert(`Error clearing data: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -452,7 +472,7 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
       </div>
 
       {/* 3. CSV Data Export & System Diagnostics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-white mb-1">Export Financial Data</h3>
@@ -483,6 +503,26 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
           >
             <RotateCcw className="w-4 h-4 text-emerald-400" />
             <span>Load Arjun Demo Profile</span>
+          </button>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-red-950/20 border border-red-500/20 shadow-xl flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-bold text-red-300 mb-1 flex items-center gap-1.5">
+              <Trash2 className="w-4 h-4 text-red-400" />
+              <span>Empty Data &amp; Re-Test</span>
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Completely erase all bills, transactions, profile, and savings to test again from a clean slate.
+            </p>
+          </div>
+          <button
+            onClick={handleClearAllData}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-300 font-semibold text-xs transition-colors"
+          >
+            <Trash2 className="w-4 h-4 text-red-400" />
+            <span>Empty All &amp; Restart</span>
           </button>
         </div>
       </div>

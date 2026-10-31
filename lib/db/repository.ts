@@ -832,3 +832,31 @@ export async function seedArjunProfile(userId: string): Promise<void> {
   });
 }
 
+// ---------------- CLEAR / RESET ALL USER DATA ----------------
+export async function clearUserData(userId: string): Promise<void> {
+  if (isSupabaseConfigured() && supabaseServer) {
+    await Promise.allSettled([
+      supabaseServer.from('autopilot_activities').delete().eq('user_id', userId),
+      supabaseServer.from('budget_allocations').delete().eq('user_id', userId),
+      supabaseServer.from('savings_contributions').delete().eq('user_id', userId),
+      supabaseServer.from('savings_goals').delete().eq('user_id', userId),
+      supabaseServer.from('transactions').delete().eq('user_id', userId),
+      supabaseServer.from('credit_card_payments').delete().eq('user_id', userId),
+      supabaseServer.from('credit_cards').delete().eq('user_id', userId),
+      supabaseServer.from('bills').delete().eq('user_id', userId),
+      supabaseServer.from('income_sources').delete().eq('user_id', userId),
+      supabaseServer.from('profiles').delete().eq('user_id', userId),
+    ]);
+  }
+
+  // Clear in-memory store
+  const store = getOrCreateUserStore(userId);
+  store.bills = [];
+  store.incomeSources = [];
+  store.creditCards = [];
+  store.savingsGoals = [];
+  store.transactions = [];
+  store.activities = [];
+  store.profile = null;
+}
+

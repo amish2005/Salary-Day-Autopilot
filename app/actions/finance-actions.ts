@@ -1140,3 +1140,27 @@ export async function saveCustomOnboardingAction({
   return { success: true };
 }
 
+/**
+ * Completely empty/clear all records for the current user to re-test from scratch
+ */
+export async function resetAndClearAllUserDataAction() {
+  const userId = await getCurrentUserId();
+  await repo.clearUserData(userId);
+
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete('salary_autopilot_user_id');
+  } catch {}
+
+  revalidatePath('/dashboard');
+  revalidatePath('/onboarding');
+  revalidatePath('/settings');
+  revalidatePath('/bills');
+  revalidatePath('/my-money');
+  revalidatePath('/spending');
+  revalidatePath('/savings');
+  revalidatePath('/activity');
+
+  return { success: true };
+}
+
