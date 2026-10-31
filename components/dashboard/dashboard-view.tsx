@@ -254,7 +254,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
             disabled={isSubmitting}
             className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 transition-all"
           >
-            ✓ Yes, Received Full ₹45k
+            ✓ Yes, Received Full {formatRupees(profile.monthly_salary)}
           </button>
           <button
             onClick={() => setIsSalaryModalOpen(true)}
@@ -618,51 +618,79 @@ export function DashboardView({ initialData }: DashboardViewProps) {
             </p>
 
             {/* Quick Presets */}
-            <div className="space-y-2 mb-4">
-              <span className="text-[11px] font-semibold text-slate-400 block">
-                Quick Scenarios:
-              </span>
-              <div className="grid grid-cols-1 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSubmitSalaryChange(37000)}
-                  disabled={isSubmitting}
-                  className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-left text-xs text-slate-200 flex items-center justify-between transition-colors"
-                >
-                  <div>
-                    <span className="font-semibold block text-amber-300">3 Days Unpaid Leave (₹8,000 short)</span>
-                    <span className="text-[10px] text-slate-400">Actual Salary: ₹37,000</span>
-                  </div>
-                  <span className="text-xs font-bold text-amber-400">₹37,000</span>
-                </button>
+            {(() => {
+              const baseSalaryRupees = Math.round(profile.monthly_salary / 100);
+              const threeDaysDeduction = Math.round((baseSalaryRupees / 30) * 3);
+              const leaveSalaryAmount = Math.max(0, baseSalaryRupees - threeDaysDeduction);
+              const bonusAmount = Math.round(baseSalaryRupees * 0.2);
+              const bonusSalaryAmount = baseSalaryRupees + bonusAmount;
 
-                <button
-                  type="button"
-                  onClick={() => handleSubmitSalaryChange(55000)}
-                  disabled={isSubmitting}
-                  className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-left text-xs text-slate-200 flex items-center justify-between transition-colors"
-                >
-                  <div>
-                    <span className="font-semibold block text-emerald-300">Festival Bonus (+₹10,000)</span>
-                    <span className="text-[10px] text-slate-400">Actual Salary: ₹55,000</span>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-400">₹55,000</span>
-                </button>
+              return (
+                <div className="space-y-2 mb-4">
+                  <span className="text-[11px] font-semibold text-slate-400 block">
+                    Quick Scenarios for Your {formatRupees(profile.monthly_salary)} Salary:
+                  </span>
+                  <div className="grid grid-cols-1 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSubmitSalaryChange(leaveSalaryAmount)}
+                      disabled={isSubmitting}
+                      className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-left text-xs text-slate-200 flex items-center justify-between transition-colors"
+                    >
+                      <div>
+                        <span className="font-semibold block text-amber-300">
+                          3 Days Unpaid Leave (-{formatRupees(threeDaysDeduction * 100)})
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Actual Salary: {formatRupees(leaveSalaryAmount * 100)}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-amber-400">
+                        {formatRupees(leaveSalaryAmount * 100)}
+                      </span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleSubmitSalaryChange(45000)}
-                  disabled={isSubmitting}
-                  className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-600 text-left text-xs text-slate-200 flex items-center justify-between transition-colors"
-                >
-                  <div>
-                    <span className="font-semibold block text-slate-200">Standard Salary Received</span>
-                    <span className="text-[10px] text-slate-400">Full Amount: ₹45,000</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSubmitSalaryChange(bonusSalaryAmount)}
+                      disabled={isSubmitting}
+                      className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-left text-xs text-slate-200 flex items-center justify-between transition-colors"
+                    >
+                      <div>
+                        <span className="font-semibold block text-emerald-300">
+                          Festival / Performance Bonus (+{formatRupees(bonusAmount * 100)})
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Actual Salary: {formatRupees(bonusSalaryAmount * 100)}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-emerald-400">
+                        {formatRupees(bonusSalaryAmount * 100)}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSubmitSalaryChange(baseSalaryRupees)}
+                      disabled={isSubmitting}
+                      className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-600 text-left text-xs text-slate-200 flex items-center justify-between transition-colors"
+                    >
+                      <div>
+                        <span className="font-semibold block text-slate-200">
+                          Standard Full Salary Received
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Full Amount: {formatRupees(profile.monthly_salary)}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-white">
+                        {formatRupees(profile.monthly_salary)}
+                      </span>
+                    </button>
                   </div>
-                  <span className="text-xs font-bold text-white">₹45,000</span>
-                </button>
-              </div>
-            </div>
+                </div>
+              );
+            })()}
 
             {/* Custom Input */}
             <form
