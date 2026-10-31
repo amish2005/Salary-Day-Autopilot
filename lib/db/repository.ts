@@ -70,25 +70,38 @@ export async function upsertProfile(userId: string, data: Partial<ProfileData>):
     salary_date: data.salary_date !== undefined ? data.salary_date : existing?.salary_date || 7,
     salary_frequency: data.salary_frequency || existing?.salary_frequency || 'monthly',
     current_balance: data.current_balance !== undefined ? data.current_balance : existing?.current_balance || 4500000,
+    salary_received_this_month: data.salary_received_this_month !== undefined ? Boolean(data.salary_received_this_month) : Boolean(existing?.salary_received_this_month),
     onboarding_completed: data.onboarding_completed !== undefined ? data.onboarding_completed : true,
     updated_at: now,
     created_at: existing?.created_at || now,
   };
 
   if (isSupabaseConfigured() && supabaseServer) {
-    const { data: saved, error } = await supabaseServer
+    let { data: saved, error } = await supabaseServer
       .from('profiles')
       .upsert(profile, { onConflict: 'user_id' })
       .select()
       .single();
+
+    if (error && error.message?.includes('column')) {
+      const { salary_received_this_month, ...cleanProfile } = profile as any;
+      const retry = await supabaseServer
+        .from('profiles')
+        .upsert(cleanProfile, { onConflict: 'user_id' })
+        .select()
+        .single();
+      saved = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error('Supabase upsertProfile error:', error);
       getOrCreateUserStore(userId).profile = profile;
       return profile;
     }
-    getOrCreateUserStore(userId).profile = saved;
-    return saved;
+    const finalProfile = { ...saved, salary_received_this_month: profile.salary_received_this_month };
+    getOrCreateUserStore(userId).profile = finalProfile;
+    return finalProfile;
   }
 
   getOrCreateUserStore(userId).profile = profile;

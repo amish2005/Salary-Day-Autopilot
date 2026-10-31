@@ -86,6 +86,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
   // Carousel & Notification State
   // Skipped IDs stored in React state: clears on reload as requested!
   const [skippedIncomeIds, setSkippedIncomeIds] = useState<string[]>([]);
+  const [confirmedIncomeIds, setConfirmedIncomeIds] = useState<string[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
   // Custom Income / Salary Modal target
@@ -118,21 +119,30 @@ export function DashboardView({ initialData }: DashboardViewProps) {
 
   // Build full list of all income sources for this user
   const rawSalary = incomeSources.find((s) => s.name.toLowerCase().includes('salary'));
+  const isSalaryConfirmed = Boolean(
+    profile.salary_received_this_month ||
+    rawSalary?.status === 'received' ||
+    confirmedIncomeIds.includes('primary-salary-source') ||
+    (rawSalary && confirmedIncomeIds.includes(rawSalary.id))
+  );
+
   const effectivePrimarySalary: IncomeSourceData = {
     id: rawSalary?.id || 'primary-salary-source',
     user_id: profile.user_id,
-    name: 'Primary Salary',
-    amount: rawSalary?.amount || profile.monthly_salary,
+    name: rawSalary?.name || 'Primary Salary',
+    amount: (isSalaryConfirmed && rawSalary?.received_amount) ? rawSalary.received_amount : (rawSalary?.amount || profile.monthly_salary),
     received_amount: rawSalary?.received_amount || profile.monthly_salary,
     expected_date: effectiveSalaryDay,
     frequency: 'monthly',
     is_variable: false,
-    status: profile.salary_received_this_month ? 'received' : 'expected',
+    status: isSalaryConfirmed ? 'received' : 'expected',
   };
 
   const allIncomes: IncomeSourceData[] = [
     effectivePrimarySalary,
-    ...incomeSources.filter((s) => !s.name.toLowerCase().includes('salary')),
+    ...incomeSources
+      .filter((s) => !s.name.toLowerCase().includes('salary'))
+      .map((inc) => (confirmedIncomeIds.includes(inc.id) ? { ...inc, status: 'received' as const } : inc)),
   ];
 
   const secondaryIncomes = allIncomes.filter((s) => !s.name.toLowerCase().includes('salary'));
@@ -154,6 +164,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
   const handleConfirmIncome = async (income: IncomeSourceData) => {
     try {
       setIsSubmitting(true);
+      setConfirmedIncomeIds((prev) => [...prev, income.id, 'primary-salary-source']);
       if (income.name.toLowerCase().includes('salary')) {
         const res = await recordSalaryArrivalAction({
           actualSalaryPaise: profile.monthly_salary,
@@ -179,6 +190,8 @@ export function DashboardView({ initialData }: DashboardViewProps) {
     if (!activeIncomeModal) return;
     try {
       setIsSubmitting(true);
+      const targetId = activeIncomeModal.id;
+      setConfirmedIncomeIds((prev) => [...prev, targetId, 'primary-salary-source']);
       const paise = Math.round(targetAmountRupees * 100);
       if (activeIncomeModal.name.toLowerCase().includes('salary')) {
         const res = await recordSalaryArrivalAction({
