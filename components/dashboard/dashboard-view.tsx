@@ -127,6 +127,10 @@ export function DashboardView({ initialData }: DashboardViewProps) {
     ...incomeSources.filter((s) => !s.name.toLowerCase().includes('salary')),
   ];
 
+  const secondaryIncomes = allIncomes.filter((s) => !s.name.toLowerCase().includes('salary'));
+  const [selectedSecIncomeId, setSelectedSecIncomeId] = useState<string | null>(null);
+  const activeSecondaryIncome = secondaryIncomes.find((s) => s.id === selectedSecIncomeId) || secondaryIncomes[0] || null;
+
   // Pending incomes: not yet received and not skipped this session
   const pendingIncomes = allIncomes.filter(
     (inc) => inc.status !== 'received' && !skippedIncomeIds.includes(inc.id)
@@ -511,7 +515,7 @@ export function DashboardView({ initialData }: DashboardViewProps) {
                 key={inc.id}
                 className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-200"
               >
-                {inc.name}: <strong>{formatRupees(inc.amount)}</strong>
+                {inc.name}: <strong>{formatRupees((inc.status === 'received' && inc.received_amount) ? inc.received_amount : inc.amount)}</strong>
               </span>
             ))}
           </div>
@@ -886,79 +890,129 @@ export function DashboardView({ initialData }: DashboardViewProps) {
 
       {/* 6. Special Trackers: Roommate Contribution, Laptop Goal & Credit Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Roommate Tracker */}
+        {/* Secondary Income / Roommate Tracker */}
         <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-blue-400" />
-                <span>Roommate Share</span>
+                <span className="truncate max-w-[140px]">
+                  {activeSecondaryIncome ? activeSecondaryIncome.name : 'Roommate Share'}
+                </span>
               </span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                summary.roommateStatus.isReceived
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : summary.roommateStatus.isOverdue
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-              }`}>
-                {summary.roommateStatus.isReceived ? 'Received' : summary.roommateStatus.isOverdue ? 'Overdue' : 'Expected'}
-              </span>
+              {activeSecondaryIncome && (
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                  activeSecondaryIncome.status === 'received'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : activeSecondaryIncome.status === 'overdue'
+                    ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                }`}>
+                  {activeSecondaryIncome.status === 'received' ? 'Received' : activeSecondaryIncome.status === 'overdue' ? 'Overdue' : 'Expected'}
+                </span>
+              )}
             </div>
 
+            {/* If user has multiple secondary incomes (e.g. Roommate Share & Part-time Tutoring), allow switching */}
+            {secondaryIncomes.length > 1 && (
+              <div className="flex items-center gap-1 mb-2.5 overflow-x-auto pb-1">
+                {secondaryIncomes.map((s) => {
+                  const isSelected = activeSecondaryIncome?.id === s.id;
+                  const displayAmt = (s.status === 'received' && s.received_amount) ? s.received_amount : s.amount;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setSelectedSecIncomeId(s.id)}
+                      className={`text-[10px] px-2 py-0.5 rounded-md font-medium whitespace-nowrap transition-colors ${
+                        isSelected
+                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                          : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {s.name.split(' ')[0]} ({formatRupees(displayAmt)})
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="text-2xl font-bold text-white mb-2">
-              {formatRupees(summary.roommateStatus.expectedAmountPaise)}
+              {activeSecondaryIncome
+                ? formatRupees((activeSecondaryIncome.status === 'received' && activeSecondaryIncome.received_amount) ? activeSecondaryIncome.received_amount : activeSecondaryIncome.amount)
+                : formatRupees(summary.roommateStatus.receivedAmountPaise || summary.roommateStatus.expectedAmountPaise)}
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              {summary.roommateStatus.statusText}
+              {activeSecondaryIncome
+                ? activeSecondaryIncome.status === 'received'
+                  ? `${activeSecondaryIncome.name} received (${formatRupees(activeSecondaryIncome.received_amount || activeSecondaryIncome.amount)}).`
+                  : activeSecondaryIncome.status === 'overdue'
+                  ? `${activeSecondaryIncome.name} contribution of ${formatRupees(activeSecondaryIncome.amount)} hasn't arrived yet. Excluded from available money.`
+                  : `${activeSecondaryIncome.name} of ${formatRupees(activeSecondaryIncome.amount)} expected around the ${activeSecondaryIncome.expected_date}th.`
+                : summary.roommateStatus.statusText}
             </p>
           </div>
 
-          {!summary.roommateStatus.isReceived && (
+          {activeSecondaryIncome && activeSecondaryIncome.status !== 'received' && (
             <button
-              onClick={async () => {
-                await updateRoommateContributionAction('received');
-                setStatusNotification('Roommate contribution confirmed.');
-                router.refresh();
-              }}
+              onClick={() => handleConfirmIncome(activeSecondaryIncome)}
+              disabled={isSubmitting}
               className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors"
             >
-              Mark ₹3,000 as Received
+              Mark {formatRupees(activeSecondaryIncome.amount)} as Received
+            </button>
+          )}
+          {(!activeSecondaryIncome || activeSecondaryIncome.status === 'received') && (
+            <button
+              onClick={() => {
+                if (activeSecondaryIncome) {
+                  setActiveIncomeModal(activeSecondaryIncome);
+                  setSalaryInput(String((activeSecondaryIncome.received_amount || activeSecondaryIncome.amount) / 100));
+                } else {
+                  setIsAddIncomeModalOpen(true);
+                }
+              }}
+              className="w-full py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors flex items-center justify-center gap-1"
+            >
+              <Edit2 className="w-3 h-3 text-emerald-400" />
+              <span>{activeSecondaryIncome ? 'Edit Amount' : '+ Add Incoming'}</span>
             </button>
           )}
         </div>
 
-        {/* Laptop Savings Goal */}
+        {/* Dynamic Primary Savings Goal */}
         <div className="p-5 rounded-2xl bg-[#0f172a] border border-slate-800 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
                 <PiggyBank className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Laptop Goal</span>
+                <span className="truncate max-w-[160px]" title={summary.savingsStatus.primaryGoal?.title || summary.savingsStatus.laptopGoal?.title || 'Savings Goal'}>
+                  {summary.savingsStatus.primaryGoal?.title || summary.savingsStatus.laptopGoal?.title || 'Savings Goal'}
+                </span>
               </span>
               <span className="text-xs font-bold text-emerald-400">
-                {summary.savingsStatus.laptopGoal?.progressPercent}%
+                {summary.savingsStatus.primaryGoal?.progressPercent ?? summary.savingsStatus.laptopGoal?.progressPercent ?? 0}%
               </span>
             </div>
 
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-2xl font-bold text-white">
-                {formatRupees(summary.savingsStatus.laptopGoal?.currentPaise || 0)}
+                {formatRupees(summary.savingsStatus.primaryGoal?.currentPaise ?? summary.savingsStatus.laptopGoal?.currentPaise ?? 0)}
               </span>
               <span className="text-xs text-slate-400">
-                of {formatRupees(summary.savingsStatus.laptopGoal?.targetPaise || 6000000)}
+                of {formatRupees(summary.savingsStatus.primaryGoal?.targetPaise ?? summary.savingsStatus.laptopGoal?.targetPaise ?? 0)}
               </span>
             </div>
 
             <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden mb-3">
               <div
-                className="h-full bg-emerald-500 rounded-full"
-                style={{ width: `${summary.savingsStatus.laptopGoal?.progressPercent || 20}%` }}
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, summary.savingsStatus.primaryGoal?.progressPercent ?? summary.savingsStatus.laptopGoal?.progressPercent ?? 0)}%` }}
               />
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {summary.savingsStatus.laptopGoal?.guidanceMessage}
+            <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+              {summary.savingsStatus.primaryGoal?.guidanceMessage ?? summary.savingsStatus.laptopGoal?.guidanceMessage ?? 'Configure your savings target.'}
             </p>
           </div>
 

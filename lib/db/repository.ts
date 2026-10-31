@@ -151,8 +151,13 @@ function parseIncomeRow(data: any): IncomeSourceData {
     } catch {}
   }
 
+  const effectiveAmount = (data.status === 'received' && received_amount > 0)
+    ? received_amount
+    : (Number(data.amount) || 0);
+
   return {
     ...data,
+    amount: effectiveAmount,
     received_amount,
     received_month,
   };

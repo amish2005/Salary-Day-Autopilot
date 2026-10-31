@@ -281,7 +281,7 @@ export function runAutopilotAllocation({
   // Shortfall explanation (Edge Case 1)
   let adjustmentsExplanation = 'Your budget is fully balanced according to planned income.';
   if (salaryShortfallPaise > 0) {
-    adjustmentsExplanation = `Your salary was ${formatRupees(salaryShortfallPaise)} lower than expected. We reduced your flexible spending by ${formatRupees(flexibleReductionPaise)} and paused ${formatRupees(savingsReductionPaise)} of optional laptop savings to protect your rent and EMI.`;
+    adjustmentsExplanation = `Your salary was ${formatRupees(salaryShortfallPaise)} lower than expected. We reduced your flexible spending by ${formatRupees(flexibleReductionPaise)} and paused ${formatRupees(savingsReductionPaise)} of optional savings to protect your rent and EMI.`;
   }
 
   return {

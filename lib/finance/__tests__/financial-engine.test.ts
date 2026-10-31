@@ -7,6 +7,7 @@ import { runAutopilotAllocation } from '../allocation-engine';
 import { calculateCreditCardLiabilities } from '../credit-card-engine';
 import { evaluateSavingsGoals } from '../savings-engine';
 import { evaluateAutopay } from '../autopay-engine';
+import { buildFinancialSummary } from '../financial-summary';
 import { ProfileData, BillData, SavingsGoalData, CreditCardData, TransactionData, IncomeSourceData } from '../types';
 
 describe('Financial Engine - Format & Date Utilities', () => {
@@ -256,5 +257,57 @@ describe('Financial Engine - Mandatory Edge Cases', () => {
     const result = evaluateSavingsGoals(goals, 1000000, new Date('2026-10-01'));
     expect(result.evaluatedGoals[0].suggestedMonthlyPaise).toBe(350000);
     expect(result.evaluatedGoals[0].isAffordable).toBe(true);
+  });
+
+  it('Financial Summary: Dynamically populates custom savings goal title and progress (e.g. Savings for future)', () => {
+    const goals: SavingsGoalData[] = [
+      {
+        id: 'g-future',
+        user_id: 'user-amish',
+        title: 'Savings for future',
+        target_amount: 6000000,
+        current_amount: 0,
+        target_date: '2027-05',
+        is_paused: false,
+        priority: 1,
+      },
+    ];
+
+    const summary = buildFinancialSummary(
+      arjunProfile,
+      [],
+      goals,
+      [],
+      [],
+      [],
+      undefined,
+      new Date('2026-10-01')
+    );
+
+    expect(summary.savingsStatus.primaryGoal).toBeDefined();
+    expect(summary.savingsStatus.primaryGoal?.title).toBe('Savings for future');
+    expect(summary.savingsStatus.primaryGoal?.targetPaise).toBe(6000000);
+    expect(summary.savingsStatus.primaryGoal?.currentPaise).toBe(0);
+    expect(summary.savingsStatus.laptopGoal?.title).toBe('Savings for future');
+  });
+
+  it('Salary Calculator & Breakdown: Honors modified received amount (₹4,500) over expected amount (₹5,000)', () => {
+    const sources: IncomeSourceData[] = [
+      {
+        id: 'inc-tutoring',
+        user_id: 'user-amish',
+        name: 'Part-time Tutoring',
+        amount: 450000,
+        received_amount: 450000,
+        expected_date: 8,
+        frequency: 'monthly',
+        is_variable: true,
+        status: 'received',
+      },
+    ];
+
+    const breakdown = calculateIncomeBreakdown(sources, 10);
+    expect(breakdown.receivedPaise).toBe(450000);
+    expect(breakdown.expectedPaise).toBe(0);
   });
 });

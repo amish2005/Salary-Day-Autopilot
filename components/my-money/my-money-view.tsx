@@ -167,7 +167,11 @@ export function MyMoneyView({ summary, incomeSources }: MyMoneyViewProps) {
 
               <div className="text-right">
                 <span className="text-sm font-bold text-white block">
-                  {formatRupees(source.amount)}
+                  {formatRupees(
+                    source.status === 'received' && source.received_amount
+                      ? source.received_amount
+                      : source.amount
+                  )}
                 </span>
                 <span className={`text-[11px] font-medium ${
                   source.status === 'received' ? 'text-emerald-400' :

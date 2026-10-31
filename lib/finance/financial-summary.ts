@@ -38,12 +38,23 @@ export interface CompleteFinancialSummary {
   };
   roommateStatus: {
     expectedAmountPaise: number;
+    receivedAmountPaise?: number;
     isReceived: boolean;
     isOverdue: boolean;
     statusText: string;
   };
   savingsStatus: {
+    primaryGoal?: {
+      id?: string;
+      title: string;
+      targetPaise: number;
+      currentPaise: number;
+      remainingPaise: number;
+      progressPercent: number;
+      guidanceMessage: string;
+    } | null;
     laptopGoal: {
+      id?: string;
       title: string;
       targetPaise: number;
       currentPaise: number;
@@ -110,29 +121,38 @@ export function buildFinancialSummary(
   const roommate = incomeSources.find((s) => s.name.toLowerCase().includes('roommate'));
   const isRoommateReceived = roommate ? roommate.status === 'received' : true;
   const isRoommateOverdue = roommate ? (roommate.status === 'overdue' || (roommate.status === 'expected' && currentDay > roommate.expected_date)) : false;
+  const roommateAmountPaise = (roommate?.status === 'received' && roommate?.received_amount)
+    ? roommate.received_amount
+    : (roommate?.amount || 0);
+
   let roommateStatusText = 'Roommate contribution received.';
   if (!isRoommateReceived) {
     if (isRoommateOverdue) {
-      roommateStatusText = `Your roommate's ${formatRupees(roommate?.amount || 0)} contribution hasn't arrived yet. We've excluded it from your available money.`;
+      roommateStatusText = `Your roommate's ${formatRupees(roommateAmountPaise)} contribution hasn't arrived yet. We've excluded it from your available money.`;
     } else {
-      roommateStatusText = `Roommate contribution of ${formatRupees(roommate?.amount || 0)} expected around the ${roommate?.expected_date || 15}th.`;
+      roommateStatusText = `Roommate contribution of ${formatRupees(roommateAmountPaise)} expected around the ${roommate?.expected_date || 15}th.`;
     }
+  } else if (roommate?.received_amount && roommate?.received_amount !== roommate?.amount) {
+    roommateStatusText = `Received ${formatRupees(roommate.received_amount)} (adjusted from planned ${formatRupees(roommate.amount)}).`;
   }
 
-  // Laptop savings goal
-  const laptopGoal = savingsGoals.find((g) => g.title.toLowerCase().includes('laptop'));
-  let laptopSummary = null;
-  if (laptopGoal) {
-    const remaining = Math.max(0, laptopGoal.target_amount - laptopGoal.current_amount);
-    const progress = Math.min(100, Math.round((laptopGoal.current_amount / laptopGoal.target_amount) * 100));
-    const evalGoal = evaluatedSavings.evaluatedGoals.find((g) => g.id === laptopGoal.id);
-    laptopSummary = {
-      title: laptopGoal.title,
-      targetPaise: laptopGoal.target_amount,
-      currentPaise: laptopGoal.current_amount,
+  // Savings goal evaluation (dynamic primary goal: active first, or first goal)
+  const primaryGoal = savingsGoals.find((g) => !g.is_paused) || savingsGoals[0] || null;
+  let primarySummary = null;
+  if (primaryGoal) {
+    const remaining = Math.max(0, primaryGoal.target_amount - primaryGoal.current_amount);
+    const progress = primaryGoal.target_amount > 0
+      ? Math.min(100, Math.round((primaryGoal.current_amount / primaryGoal.target_amount) * 100))
+      : 0;
+    const evalGoal = evaluatedSavings.evaluatedGoals.find((g) => g.id === primaryGoal.id);
+    primarySummary = {
+      id: primaryGoal.id,
+      title: primaryGoal.title,
+      targetPaise: primaryGoal.target_amount,
+      currentPaise: primaryGoal.current_amount,
       remainingPaise: remaining,
       progressPercent: progress,
-      guidanceMessage: evalGoal?.guidanceMessage || `Remaining: ${formatRupees(remaining)} before April deadline.`,
+      guidanceMessage: evalGoal?.guidanceMessage || `Remaining: ${formatRupees(remaining)} towards ${primaryGoal.title}.`,
     };
   }
 
@@ -166,13 +186,15 @@ export function buildFinancialSummary(
       totalUnpaidPaise: billSchedule.totalUnpaidObligationsPaise,
     },
     roommateStatus: {
-      expectedAmountPaise: roommate?.amount || 0,
+      expectedAmountPaise: roommateAmountPaise,
+      receivedAmountPaise: roommate?.received_amount || roommateAmountPaise,
       isReceived: isRoommateReceived,
       isOverdue: isRoommateOverdue,
       statusText: roommateStatusText,
     },
     savingsStatus: {
-      laptopGoal: laptopSummary,
+      primaryGoal: primarySummary,
+      laptopGoal: primarySummary,
     },
     insuranceReserve,
     creditCardStatus: {

@@ -231,7 +231,7 @@ export async function recordSalaryArrivalAction({
   if (shortfallPaise > 0) {
     const flexibleTrim = Math.min(shortfallPaise, 600000);
     const savingsTrim = Math.max(0, shortfallPaise - flexibleTrim);
-    explanation = `Your salary was ${formatRupees(shortfallPaise)} lower than expected. We reduced your flexible spending by ${formatRupees(flexibleTrim)} and paused ${formatRupees(savingsTrim)} of optional laptop savings to protect your rent and EMI.`;
+    explanation = `Your salary was ${formatRupees(shortfallPaise)} lower than expected. We reduced your flexible spending by ${formatRupees(flexibleTrim)} and paused ${formatRupees(savingsTrim)} of optional savings to protect your rent and EMI.`;
   } else if (diffPaise > 0) {
     explanation = `Salary bonus of ${formatRupees(diffPaise)} received! Extra funds added to flexible spending and savings.`;
   }
@@ -531,6 +531,7 @@ export async function confirmIncomeArrivalAction({
   if (source) {
     await repo.updateIncomeSource(userId, incomeId, {
       status: 'received',
+      amount: actualAmountPaise,
       received_amount: actualAmountPaise,
       received_date: new Date().toISOString(),
       received_month: new Date().toISOString().substring(0, 7),
@@ -721,6 +722,8 @@ export async function updateRoommateContributionAction(status: 'received' | 'exp
   await repo.updateIncomeSource(userId, roommate.id, {
     status,
     amount,
+    received_amount: status === 'received' ? amount : undefined,
+    received_month: status === 'received' ? new Date().toISOString().substring(0, 7) : undefined,
     received_date: status === 'received' ? new Date().toISOString() : null,
   });
 
