@@ -32,6 +32,14 @@ interface DynamicBillItem {
   priority: 'critical' | 'high' | 'essential' | 'discretionary';
 }
 
+interface DynamicIncomeItem {
+  id: string;
+  name: string;
+  amount: string;
+  expectedDate: string;
+  isVariable: boolean;
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -43,6 +51,40 @@ export default function OnboardingPage() {
   const [monthlySalary, setMonthlySalary] = useState('45000');
   const [salaryDate, setSalaryDate] = useState('7');
   const [currentBalance, setCurrentBalance] = useState('45000');
+
+  // Step 1: Additional Incomes (Roommate share, Freelancing, Side gig)
+  const [additionalIncomes, setAdditionalIncomes] = useState<DynamicIncomeItem[]>([
+    {
+      id: 'inc-roommate',
+      name: 'Roommate Share (Wi-Fi & Electricity)',
+      amount: '3000',
+      expectedDate: '15',
+      isVariable: true,
+    },
+  ]);
+
+  const handleAddIncomeRow = (prefill?: Partial<DynamicIncomeItem>) => {
+    setAdditionalIncomes((prev) => [
+      ...prev,
+      {
+        id: `inc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: prefill?.name || '',
+        amount: prefill?.amount || '',
+        expectedDate: prefill?.expectedDate || '15',
+        isVariable: prefill?.isVariable ?? false,
+      },
+    ]);
+  };
+
+  const handleRemoveIncomeRow = (id: string) => {
+    setAdditionalIncomes((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const handleUpdateIncomeField = (id: string, field: keyof DynamicIncomeItem, value: any) => {
+    setAdditionalIncomes((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, [field]: value } : i))
+    );
+  };
 
   // Step 2: Dynamic Bills List (Unlimited Key-Value pairs)
   const [bills, setBills] = useState<DynamicBillItem[]>([
@@ -159,6 +201,15 @@ export default function OnboardingPage() {
           priority: b.priority,
         }));
 
+      const formattedIncomes = additionalIncomes
+        .filter((i) => i.name.trim() !== '' && Number(i.amount) > 0)
+        .map((i) => ({
+          name: i.name.trim(),
+          amountPaise: Math.round(Number(i.amount) * 100),
+          expectedDate: Math.min(31, Math.max(1, Number(i.expectedDate) || 15)),
+          isVariable: Boolean(i.isVariable),
+        }));
+
       await saveCustomOnboardingAction({
         profile: {
           fullName,
@@ -168,6 +219,7 @@ export default function OnboardingPage() {
           currentBalancePaise: balancePaise,
         },
         bills: formattedBills,
+        incomeSources: formattedIncomes,
       });
 
       router.push('/dashboard');
@@ -314,6 +366,114 @@ export default function OnboardingPage() {
                 <span className="text-[11px] text-slate-500 mt-1 block">
                   Autopilot budgets from your actual available cash on hand.
                 </span>
+              </div>
+
+              {/* Additional Incomes Section */}
+              <div className="pt-2 border-t border-slate-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                      Additional Incomes (Roommate, Freelancing, Side Gigs)
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Add any incoming cash flows so Autopilot accounts for all credits.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddIncomeRow()}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Income</span>
+                  </button>
+                </div>
+
+                {/* Quick Add Chips */}
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleAddIncomeRow({ name: 'Roommate Share (WiFi & Electricity)', amount: '3000', expectedDate: '15', isVariable: true })}
+                    className="px-2.5 py-1 rounded-lg text-[11px] bg-slate-900 border border-slate-700 hover:border-emerald-500 hover:text-emerald-400 text-slate-300 transition-colors"
+                  >
+                    + Roommate Share (₹3,000)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddIncomeRow({ name: 'Freelance Web Design', amount: '10000', expectedDate: '20', isVariable: true })}
+                    className="px-2.5 py-1 rounded-lg text-[11px] bg-slate-900 border border-slate-700 hover:border-emerald-500 hover:text-emerald-400 text-slate-300 transition-colors"
+                  >
+                    + Freelance (₹10,000)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddIncomeRow({ name: 'Part-time Tutoring', amount: '5000', expectedDate: '10', isVariable: false })}
+                    className="px-2.5 py-1 rounded-lg text-[11px] bg-slate-900 border border-slate-700 hover:border-emerald-500 hover:text-emerald-400 text-slate-300 transition-colors"
+                  >
+                    + Tutoring (₹5,000)
+                  </button>
+                </div>
+
+                {/* Incomes List */}
+                <div className="space-y-2.5">
+                  {additionalIncomes.map((inc) => (
+                    <div
+                      key={inc.id}
+                      className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-2.5"
+                    >
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={inc.name}
+                          onChange={(e) => handleUpdateIncomeField(inc.id, 'name', e.target.value)}
+                          placeholder="e.g. Roommate Share"
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div className="w-28 shrink-0">
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">₹</span>
+                          <input
+                            type="number"
+                            value={inc.amount}
+                            onChange={(e) => handleUpdateIncomeField(inc.id, 'amount', e.target.value)}
+                            placeholder="3000"
+                            className="w-full pl-6 pr-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="w-28 shrink-0">
+                        <input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={inc.expectedDate}
+                          onChange={(e) => handleUpdateIncomeField(inc.id, 'expectedDate', e.target.value)}
+                          placeholder="Day 15"
+                          title="Expected Day of Month (1-31)"
+                          className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white text-center focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIncomeRow(inc.id)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-colors shrink-0"
+                        title="Remove Income"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {additionalIncomes.length > 0 && (
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs flex items-center justify-between text-emerald-300">
+                    <span>Total Expected Monthly Inflow:</span>
+                    <strong className="text-white font-bold">
+                      {formatRupees((Number(monthlySalary) + additionalIncomes.reduce((s, i) => s + (Number(i.amount) || 0), 0)) * 100)}
+                    </strong>
+                  </div>
+                )}
               </div>
 
               <div className="pt-4">

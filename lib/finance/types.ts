@@ -15,6 +15,7 @@ export interface ProfileData {
   salary_date: number; // 1-31
   salary_frequency: 'monthly' | 'biweekly';
   current_balance: number; // in paise
+  salary_received_this_month?: boolean;
   onboarding_completed: boolean;
   created_at?: string;
   updated_at?: string;
@@ -30,6 +31,8 @@ export interface IncomeSourceData {
   is_variable: boolean;
   status: IncomeStatus;
   received_date?: string | null;
+  received_amount?: number; // in paise
+  received_month?: string; // e.g. '2026-10'
   notes?: string;
 }
 
@@ -38,6 +41,8 @@ export interface BillData {
   user_id: string;
   name: string;
   amount: number; // in paise
+  paid_amount?: number; // in paise, for partial payment
+  is_ignored?: boolean; // if ignored for this month
   due_date: number; // 1-31
   recurrence: BillRecurrence;
   annual_month?: number; // 1-12 (e.g. 2 for February)

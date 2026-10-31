@@ -187,4 +187,24 @@ describe('Financial Engine - Mandatory Edge Cases', () => {
     expect(evalSavings.evaluatedGoals[0].remainingTargetPaise).toBe(4800000);
     expect(evalSavings.evaluatedGoals[0].suggestedMonthlyPaise).toBeGreaterThan(0);
   });
+
+  it('Handles partial bill payment: ₹3,000 paid for ₹5,000 bill leaves ₹2,000 due', () => {
+    const billsWithPartial: BillData[] = [
+      { id: 'b3', user_id: 'user-arjun', name: 'Money sent home', amount: 500000, paid_amount: 300000, due_date: 10, recurrence: 'monthly', category: 'Family', priority: 'high', is_paid: false },
+    ];
+    const schedule = scheduleBills(billsWithPartial, 2026, 10, 5);
+    expect(schedule.totalPaidPaise).toBe(300000);
+    expect(schedule.totalUnpaidObligationsPaise).toBe(200000);
+    expect(schedule.upcomingBills[0].remainingAmountPaise).toBe(200000);
+  });
+
+  it('Ignores bill for the month: excludes from obligations and frees up cash', () => {
+    const billsWithIgnored: BillData[] = [
+      { id: 'b3', user_id: 'user-arjun', name: 'Money sent home', amount: 500000, due_date: 10, recurrence: 'monthly', category: 'Family', priority: 'high', is_paid: false, is_ignored: true },
+    ];
+    const schedule = scheduleBills(billsWithIgnored, 2026, 10, 5);
+    expect(schedule.totalUnpaidObligationsPaise).toBe(0);
+    expect(schedule.ignoredBills.length).toBe(1);
+    expect(schedule.upcomingBills.length).toBe(0);
+  });
 });

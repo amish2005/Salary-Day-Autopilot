@@ -104,16 +104,31 @@ export async function recordSalaryArrivalAction({
   // Update profile balance to reflect actual salary deposited
   await repo.upsertProfile(userId, {
     current_balance: actualSalaryPaise,
+    salary_received_this_month: true,
   });
 
   // Mark monthly salary income source as received
   const incomeSources = await repo.getIncomeSources(userId);
-  const salarySource = incomeSources.find((s) => s.name.toLowerCase().includes('salary'));
+  let salarySource = incomeSources.find((s) => s.name.toLowerCase().includes('salary'));
   if (salarySource) {
     await repo.updateIncomeSource(userId, salarySource.id, {
       status: 'received',
       amount: actualSalaryPaise,
+      received_amount: actualSalaryPaise,
       received_date: new Date().toISOString(),
+      received_month: new Date().toISOString().substring(0, 7),
+    });
+  } else {
+    await repo.addIncomeSource(userId, {
+      name: 'Primary Salary',
+      amount: actualSalaryPaise,
+      expected_date: profile.salary_date,
+      frequency: 'monthly',
+      is_variable: false,
+      status: 'received',
+      received_date: new Date().toISOString(),
+      received_amount: actualSalaryPaise,
+      received_month: new Date().toISOString().substring(0, 7),
     });
   }
 
@@ -248,6 +263,220 @@ export async function deleteBillAction(billId: string) {
 
   revalidatePath('/bills');
   revalidatePath('/dashboard');
+  revalidatePath('/activity');
+  return { success: true };
+}
+
+/**
+ * Record a partial or full payment towards a bill
+ * E.g., Bill is ₹5,000, user pays ₹3,000 today, remaining ₹2,000 is tracked
+ */
+export async function recordBillPaymentAction({
+  billId,
+  amountPaidPaise,
+}: {
+  billId: string;
+  amountPaidPaise: number;
+}) {
+  const userId = await getCurrentUserId();
+  const bills = await repo.getBills(userId);
+  const targetBill = bills.find((b) => b.id === billId);
+  if (!targetBill) throw new Error('Bill not found');
+
+  const previousPaid = targetBill.paid_amount || 0;
+  const newTotalPaid = previousPaid + amountPaidPaise;
+  const isFullyPaid = newTotalPaid >= targetBill.amount;
+  const remainingDue = Math.max(0, targetBill.amount - newTotalPaid);
+
+  const updated = await repo.updateBill(userId, billId, {
+    paid_amount: newTotalPaid,
+    is_paid: isFullyPaid,
+    paid_date: isFullyPaid ? new Date().toISOString() : targetBill.paid_date,
+  });
+
+  const profile = await repo.getProfile(userId);
+  if (profile) {
+    const newBalance = Math.max(0, profile.current_balance - amountPaidPaise);
+    await repo.upsertProfile(userId, { current_balance: newBalance });
+
+    await repo.addTransaction(userId, {
+      description: `Bill Payment: ${targetBill.name}${!isFullyPaid ? ` (Paid: ${formatRupees(amountPaidPaise)})` : ''}`,
+      amount: amountPaidPaise,
+      category: targetBill.category,
+      payment_method: 'bank',
+      date: new Date().toISOString().split('T')[0],
+      notes: isFullyPaid
+        ? `Fully settled on ${new Date().toLocaleDateString('en-IN')}`
+        : `Partial payment. Remaining due: ${formatRupees(remainingDue)}`,
+    });
+
+    await repo.logActivity(userId, {
+      action_type: 'BILL_PAID',
+      amount: amountPaidPaise,
+      previous_state: `Due: ${formatRupees(targetBill.amount - previousPaid)}`,
+      new_state: isFullyPaid ? 'Paid in Full' : `Remaining: ${formatRupees(remainingDue)}`,
+      explanation: isFullyPaid
+        ? `Paid remaining ${formatRupees(amountPaidPaise)} for ${targetBill.name}. Bill is now fully settled.`
+        : `Paid ${formatRupees(amountPaidPaise)} towards ${targetBill.name}. Remaining ${formatRupees(remainingDue)} is still reserved until settled or ignored.`,
+    });
+  }
+
+  revalidatePath('/bills');
+  revalidatePath('/dashboard');
+  revalidatePath('/spending');
+  revalidatePath('/activity');
+  return updated;
+}
+
+/**
+ * Ignore a bill for the current month
+ * Removes it from reserved obligations and frees cash in flexible spending
+ */
+export async function ignoreBillForMonthAction({
+  billId,
+  ignore = true,
+}: {
+  billId: string;
+  ignore?: boolean;
+}) {
+  const userId = await getCurrentUserId();
+  const bills = await repo.getBills(userId);
+  const targetBill = bills.find((b) => b.id === billId);
+  if (!targetBill) throw new Error('Bill not found');
+
+  const updated = await repo.updateBill(userId, billId, {
+    is_ignored: ignore,
+  });
+
+  const remaining = Math.max(0, targetBill.amount - (targetBill.paid_amount || 0));
+
+  await repo.logActivity(userId, {
+    action_type: ignore ? 'BILL_IGNORED' : 'BILL_RESTORED',
+    amount: remaining,
+    previous_state: ignore ? 'Active Obligation' : 'Ignored',
+    new_state: ignore ? 'Ignored this month' : 'Active Obligation',
+    explanation: ignore
+      ? `Ignored ${targetBill.name} for this month. Remaining ${formatRupees(remaining)} removed from obligations and returned to flexible spending.`
+      : `Restored ${targetBill.name} back to this month's active obligations.`,
+  });
+
+  revalidatePath('/bills');
+  revalidatePath('/dashboard');
+  revalidatePath('/activity');
+  return updated;
+}
+
+/**
+ * Update an existing bill
+ */
+export async function updateBillAction(billId: string, updates: Partial<BillData>) {
+  const userId = await getCurrentUserId();
+  const updated = await repo.updateBill(userId, billId, updates);
+  revalidatePath('/bills');
+  revalidatePath('/dashboard');
+  revalidatePath('/activity');
+  return updated;
+}
+
+/**
+ * Confirm receipt of an incoming payment (Salary, Roommate share, Freelancing, etc.)
+ */
+export async function confirmIncomeArrivalAction({
+  incomeId,
+  actualAmountPaise,
+}: {
+  incomeId: string;
+  actualAmountPaise: number;
+}) {
+  const userId = await getCurrentUserId();
+  const incomeSources = await repo.getIncomeSources(userId);
+  const source = incomeSources.find((s) => s.id === incomeId);
+  const profile = await repo.getProfile(userId);
+
+  if (source && source.name.toLowerCase().includes('salary')) {
+    return recordSalaryArrivalAction({ actualSalaryPaise: actualAmountPaise });
+  }
+
+  if (source) {
+    await repo.updateIncomeSource(userId, incomeId, {
+      status: 'received',
+      received_amount: actualAmountPaise,
+      received_date: new Date().toISOString(),
+      received_month: new Date().toISOString().substring(0, 7),
+    });
+
+    if (profile) {
+      const newBalance = profile.current_balance + actualAmountPaise;
+      await repo.upsertProfile(userId, { current_balance: newBalance });
+    }
+
+    await repo.addTransaction(userId, {
+      description: `Income Received: ${source.name}`,
+      amount: actualAmountPaise,
+      category: 'Income',
+      payment_method: 'bank',
+      date: new Date().toISOString().split('T')[0],
+      notes: `Credited on ${new Date().toLocaleDateString('en-IN')}`,
+    });
+
+    await repo.logActivity(userId, {
+      action_type: 'INCOME_RECEIVED',
+      amount: actualAmountPaise,
+      previous_state: `Expected: ${formatRupees(source.amount)}`,
+      new_state: `Received: ${formatRupees(actualAmountPaise)}`,
+      explanation: `Received ${formatRupees(actualAmountPaise)} from ${source.name}. Bank balance updated.`,
+    });
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/my-money');
+  revalidatePath('/activity');
+  return { success: true };
+}
+
+/**
+ * Add a new income source (Roommate share, Freelancing, Side gig)
+ */
+export async function addIncomeSourceAction(income: {
+  name: string;
+  amountPaise: number;
+  expectedDate: number;
+  frequency?: 'monthly' | 'quarterly' | 'annual' | 'variable';
+  isVariable?: boolean;
+  status?: 'expected' | 'received';
+}) {
+  const userId = await getCurrentUserId();
+  const created = await repo.addIncomeSource(userId, {
+    name: income.name,
+    amount: income.amountPaise,
+    expected_date: income.expectedDate,
+    frequency: income.frequency || 'monthly',
+    is_variable: income.isVariable || false,
+    status: income.status || 'expected',
+  });
+
+  await repo.logActivity(userId, {
+    action_type: 'INCOME_SOURCE_ADDED',
+    amount: income.amountPaise,
+    previous_state: 'None',
+    new_state: `${income.name} (${formatRupees(income.amountPaise)})`,
+    explanation: `Added new income source: ${income.name} of ${formatRupees(income.amountPaise)} expected on day ${income.expectedDate}.`,
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath('/my-money');
+  revalidatePath('/activity');
+  return created;
+}
+
+/**
+ * Delete an income source
+ */
+export async function deleteIncomeSourceAction(incomeId: string) {
+  const userId = await getCurrentUserId();
+  await repo.deleteIncomeSource(userId, incomeId);
+  revalidatePath('/dashboard');
+  revalidatePath('/my-money');
   revalidatePath('/activity');
   return { success: true };
 }

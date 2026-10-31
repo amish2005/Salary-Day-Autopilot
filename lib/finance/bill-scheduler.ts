@@ -5,6 +5,8 @@ export interface ScheduledBill extends BillData {
   effectiveDueDay: number; // clamped to month days (e.g., 28 for Feb 31st)
   isDueThisCycle: boolean;
   daysUntilDue: number;
+  remainingAmountPaise: number;
+  paidAmountPaise: number;
 }
 
 export interface BillScheduleResult {
@@ -12,6 +14,7 @@ export interface BillScheduleResult {
   upcomingBills: ScheduledBill[];
   paidBills: ScheduledBill[];
   overdueBills: ScheduledBill[];
+  ignoredBills: ScheduledBill[];
   totalUnpaidObligationsPaise: number;
   totalPaidPaise: number;
   criticalObligationsPaise: number;
@@ -31,6 +34,7 @@ export function scheduleBills(
   const upcomingBills: ScheduledBill[] = [];
   const paidBills: ScheduledBill[] = [];
   const overdueBills: ScheduledBill[] = [];
+  const ignoredBills: ScheduledBill[] = [];
 
   let totalUnpaidObligationsPaise = 0;
   let totalPaidPaise = 0;
@@ -48,14 +52,25 @@ export function scheduleBills(
     const effectiveDueDay = clampDueDateToMonth(bill.due_date, year, month);
     const daysUntilDue = effectiveDueDay - currentDay;
 
+    const paidAmount = bill.paid_amount || 0;
+    const remainingAmount = bill.is_paid ? 0 : Math.max(0, bill.amount - paidAmount);
+
     const scheduledBill: ScheduledBill = {
       ...bill,
       effectiveDueDay,
       isDueThisCycle: isDueThisMonth,
       daysUntilDue,
+      remainingAmountPaise: remainingAmount,
+      paidAmountPaise: paidAmount,
     };
 
     scheduled.push(scheduledBill);
+
+    // If ignored for this month, do not count towards this month's obligations
+    if (bill.is_ignored) {
+      ignoredBills.push(scheduledBill);
+      continue;
+    }
 
     if (isAnnual && !isDueThisMonth) {
       // Plan ahead for annual expense by setting aside 1/12th monthly
@@ -63,11 +78,12 @@ export function scheduleBills(
       continue;
     }
 
-    if (bill.is_paid) {
+    if (bill.is_paid || remainingAmount === 0) {
       totalPaidPaise += bill.amount;
       paidBills.push(scheduledBill);
     } else {
-      totalUnpaidObligationsPaise += bill.amount;
+      totalUnpaidObligationsPaise += remainingAmount;
+      totalPaidPaise += paidAmount;
 
       if (scheduledBill.daysUntilDue < 0) {
         overdueBills.push(scheduledBill);
@@ -76,11 +92,11 @@ export function scheduleBills(
       }
 
       if (bill.priority === 'critical') {
-        criticalObligationsPaise += bill.amount;
+        criticalObligationsPaise += remainingAmount;
       } else if (bill.priority === 'high') {
-        highObligationsPaise += bill.amount;
+        highObligationsPaise += remainingAmount;
       } else if (bill.priority === 'essential') {
-        essentialObligationsPaise += bill.amount;
+        essentialObligationsPaise += remainingAmount;
       }
     }
   }
@@ -96,6 +112,7 @@ export function scheduleBills(
     upcomingBills,
     paidBills,
     overdueBills,
+    ignoredBills,
     totalUnpaidObligationsPaise,
     totalPaidPaise,
     criticalObligationsPaise,

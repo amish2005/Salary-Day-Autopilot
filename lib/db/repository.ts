@@ -95,6 +95,71 @@ export async function upsertProfile(userId: string, data: Partial<ProfileData>):
   return profile;
 }
 
+// Helper to parse dynamic metadata embedded in notes or columns
+function parseBillRow(data: any): BillData {
+  let paid_amount = Number(data.paid_amount) || 0;
+  let is_ignored = Boolean(data.is_ignored);
+  let notes = data.notes || '';
+
+  if (notes.includes('__META__')) {
+    try {
+      const match = notes.match(/__META__({.*?})__META__/);
+      if (match) {
+        const meta = JSON.parse(match[1]);
+        if (paid_amount === 0 && meta.paid_amount !== undefined) paid_amount = meta.paid_amount;
+        if (!is_ignored && meta.is_ignored !== undefined) is_ignored = Boolean(meta.is_ignored);
+      }
+    } catch {}
+  }
+
+  return {
+    ...data,
+    paid_amount,
+    is_ignored,
+  };
+}
+
+function encodeBillNotes(notes: string | undefined, paid_amount?: number, is_ignored?: boolean): string {
+  let clean = (notes || '').replace(/__META__.*?__META__/g, '').trim();
+  if (paid_amount !== undefined || is_ignored !== undefined) {
+    const metaStr = `__META__${JSON.stringify({ paid_amount: paid_amount || 0, is_ignored: Boolean(is_ignored) })}__META__`;
+    return clean ? `${clean} ${metaStr}` : metaStr;
+  }
+  return clean;
+}
+
+function parseIncomeRow(data: any): IncomeSourceData {
+  let received_amount = Number(data.received_amount) || 0;
+  let received_month = data.received_month || null;
+  let notes = data.notes || '';
+
+  if (notes.includes('__META__')) {
+    try {
+      const match = notes.match(/__META__({.*?})__META__/);
+      if (match) {
+        const meta = JSON.parse(match[1]);
+        if (received_amount === 0 && meta.received_amount !== undefined) received_amount = meta.received_amount;
+        if (!received_month && meta.received_month) received_month = meta.received_month;
+      }
+    } catch {}
+  }
+
+  return {
+    ...data,
+    received_amount,
+    received_month,
+  };
+}
+
+function encodeIncomeNotes(notes: string | undefined, received_amount?: number, received_month?: string): string {
+  let clean = (notes || '').replace(/__META__.*?__META__/g, '').trim();
+  if (received_amount !== undefined || received_month !== undefined) {
+    const metaStr = `__META__${JSON.stringify({ received_amount, received_month })}__META__`;
+    return clean ? `${clean} ${metaStr}` : metaStr;
+  }
+  return clean;
+}
+
 // ---------------- BILLS ----------------
 export async function getBills(userId: string): Promise<BillData[]> {
   if (isSupabaseConfigured() && supabaseServer) {
@@ -106,11 +171,11 @@ export async function getBills(userId: string): Promise<BillData[]> {
 
     if (error) {
       console.error('Supabase getBills error:', error);
-      return getOrCreateUserStore(userId).bills;
+      return getOrCreateUserStore(userId).bills.map(parseBillRow);
     }
-    return data || [];
+    return (data || []).map(parseBillRow);
   }
-  return getOrCreateUserStore(userId).bills;
+  return getOrCreateUserStore(userId).bills.map(parseBillRow);
 }
 
 export async function addBill(userId: string, bill: Omit<BillData, 'id' | 'user_id'>): Promise<BillData> {
@@ -120,39 +185,81 @@ export async function addBill(userId: string, bill: Omit<BillData, 'id' | 'user_
     user_id: userId,
   };
 
+  const encodedNotes = encodeBillNotes(bill.notes, bill.paid_amount, bill.is_ignored);
+  const payloadToSave = {
+    ...newBill,
+    notes: encodedNotes,
+  };
+
   if (isSupabaseConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer.from('bills').insert(newBill).select().single();
+    // Try full insert first
+    let { data, error } = await supabaseServer.from('bills').insert(payloadToSave).select().single();
+    if (error && error.message?.includes('column')) {
+      // If table doesn't have paid_amount or is_ignored columns yet, omit them and let notes handle it
+      const { paid_amount, is_ignored, ...cleanPayload } = payloadToSave as any;
+      const retry = await supabaseServer.from('bills').insert(cleanPayload).select().single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (!error && data) {
-      getOrCreateUserStore(userId).bills.push(data);
-      return data;
+      const parsed = parseBillRow(data);
+      getOrCreateUserStore(userId).bills.push(parsed);
+      return parsed;
     }
   }
 
-  getOrCreateUserStore(userId).bills.push(newBill);
-  return newBill;
+  const parsed = parseBillRow(payloadToSave);
+  getOrCreateUserStore(userId).bills.push(parsed);
+  return parsed;
 }
 
 export async function updateBill(userId: string, id: string, updates: Partial<BillData>): Promise<BillData | null> {
+  const store = getOrCreateUserStore(userId);
+  const existingBill = store.bills.find((b) => b.id === id);
+
+  const mergedPaid = updates.paid_amount !== undefined ? updates.paid_amount : existingBill?.paid_amount;
+  const mergedIgnored = updates.is_ignored !== undefined ? updates.is_ignored : existingBill?.is_ignored;
+  const encodedNotes = encodeBillNotes(updates.notes || existingBill?.notes, mergedPaid, mergedIgnored);
+
+  const payload: any = {
+    ...updates,
+    notes: encodedNotes,
+  };
+
   if (isSupabaseConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
+    let { data, error } = await supabaseServer
       .from('bills')
-      .update(updates)
+      .update(payload)
       .eq('id', id)
       .eq('user_id', userId)
       .select()
       .single();
 
+    if (error && error.message?.includes('column')) {
+      const { paid_amount, is_ignored, ...cleanPayload } = payload;
+      const retry = await supabaseServer
+        .from('bills')
+        .update(cleanPayload)
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (!error && data) {
-      const store = getOrCreateUserStore(userId);
-      store.bills = store.bills.map((b) => (b.id === id ? data : b));
-      return data;
+      const parsed = parseBillRow(data);
+      store.bills = store.bills.map((b) => (b.id === id ? parsed : b));
+      return parsed;
     }
   }
 
-  const store = getOrCreateUserStore(userId);
   const index = store.bills.findIndex((b) => b.id === id && b.user_id === userId);
   if (index === -1) return null;
-  store.bills[index] = { ...store.bills[index], ...updates };
+  const parsed = parseBillRow({ ...store.bills[index], ...payload });
+  store.bills[index] = parsed;
   return store.bills[index];
 }
 
@@ -181,51 +288,91 @@ export async function getIncomeSources(userId: string): Promise<IncomeSourceData
       .select('*')
       .eq('user_id', userId);
 
-    if (!error && data) return data;
+    if (!error && data) return data.map(parseIncomeRow);
   }
-  return getOrCreateUserStore(userId).incomeSources;
+  return getOrCreateUserStore(userId).incomeSources.map(parseIncomeRow);
 }
 
 export async function addIncomeSource(userId: string, source: Omit<IncomeSourceData, 'id' | 'user_id'>): Promise<IncomeSourceData> {
   const newSource: IncomeSourceData = {
     ...source,
-    id: `inc-${Date.now()}`,
+    id: `inc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     user_id: userId,
   };
 
+  const encodedNotes = encodeIncomeNotes(source.notes, source.received_amount, source.received_month);
+  const payload: any = {
+    ...newSource,
+    notes: encodedNotes,
+  };
+
   if (isSupabaseConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer.from('income_sources').insert(newSource).select().single();
+    let { data, error } = await supabaseServer.from('income_sources').insert(payload).select().single();
+    if (error && error.message?.includes('column')) {
+      const { received_amount, received_month, ...cleanPayload } = payload;
+      const retry = await supabaseServer.from('income_sources').insert(cleanPayload).select().single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (!error && data) {
-      getOrCreateUserStore(userId).incomeSources.push(data);
-      return data;
+      const parsed = parseIncomeRow(data);
+      getOrCreateUserStore(userId).incomeSources.push(parsed);
+      return parsed;
     }
   }
 
-  getOrCreateUserStore(userId).incomeSources.push(newSource);
-  return newSource;
+  const parsed = parseIncomeRow(payload);
+  getOrCreateUserStore(userId).incomeSources.push(parsed);
+  return parsed;
 }
 
 export async function updateIncomeSource(userId: string, id: string, updates: Partial<IncomeSourceData>): Promise<IncomeSourceData | null> {
+  const store = getOrCreateUserStore(userId);
+  const existing = store.incomeSources.find((s) => s.id === id);
+
+  const mergedAmount = updates.received_amount !== undefined ? updates.received_amount : existing?.received_amount;
+  const mergedMonth = updates.received_month !== undefined ? updates.received_month : existing?.received_month;
+  const encodedNotes = encodeIncomeNotes(updates.notes || existing?.notes, mergedAmount, mergedMonth);
+
+  const payload: any = {
+    ...updates,
+    notes: encodedNotes,
+  };
+
   if (isSupabaseConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
+    let { data, error } = await supabaseServer
       .from('income_sources')
-      .update(updates)
+      .update(payload)
       .eq('id', id)
       .eq('user_id', userId)
       .select()
       .single();
 
+    if (error && error.message?.includes('column')) {
+      const { received_amount, received_month, ...cleanPayload } = payload;
+      const retry = await supabaseServer
+        .from('income_sources')
+        .update(cleanPayload)
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (!error && data) {
-      const store = getOrCreateUserStore(userId);
-      store.incomeSources = store.incomeSources.map((s) => (s.id === id ? data : s));
-      return data;
+      const parsed = parseIncomeRow(data);
+      store.incomeSources = store.incomeSources.map((s) => (s.id === id ? parsed : s));
+      return parsed;
     }
   }
 
-  const store = getOrCreateUserStore(userId);
   const idx = store.incomeSources.findIndex((s) => s.id === id && s.user_id === userId);
   if (idx === -1) return null;
-  store.incomeSources[idx] = { ...store.incomeSources[idx], ...updates };
+  const parsed = parseIncomeRow({ ...store.incomeSources[idx], ...payload });
+  store.incomeSources[idx] = parsed;
   return store.incomeSources[idx];
 }
 

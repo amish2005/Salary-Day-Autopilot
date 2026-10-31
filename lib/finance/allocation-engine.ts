@@ -66,7 +66,9 @@ export function runAutopilotAllocation({
 
   // Mandatory Bill obligations
   for (const bill of billSchedule.allBills) {
-    if (!bill.isDueThisCycle || bill.is_paid) continue;
+    if (!bill.isDueThisCycle || bill.is_paid || bill.is_ignored) continue;
+    const remainingAmount = bill.remainingAmountPaise !== undefined ? bill.remainingAmountPaise : (bill.amount - (bill.paid_amount || 0));
+    if (remainingAmount <= 0) continue;
 
     let envPriority: VirtualEnvelope['priority'] = 'high';
     if (bill.priority === 'critical') envPriority = 'critical';
@@ -76,9 +78,9 @@ export function runAutopilotAllocation({
     targetItems.push({
       name: bill.name,
       category: bill.category,
-      targetPaise: bill.amount,
+      targetPaise: remainingAmount,
       priority: envPriority,
-      reason: `Due on ${bill.effectiveDueDay}th (${bill.priority} priority)`,
+      reason: `Due on ${bill.effectiveDueDay}th (${bill.priority} priority)${bill.paid_amount ? ` (Paid: ${formatRupees(bill.paid_amount)})` : ''}`,
       isCritical: bill.priority === 'critical',
     });
   }
