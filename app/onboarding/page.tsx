@@ -562,70 +562,86 @@ export default function OnboardingPage() {
               {/* Dynamic Bills List */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">
-                    Your Scheduled Bills ({bills.length})
-                  </span>
-                  <span className="text-[11px] text-slate-400">
-                    Add or remove as many as you need
-                  </span>
+                  <div>
+                    <span className="text-xs font-bold text-white uppercase tracking-wider block">
+                      Your Scheduled Bills &amp; Due Dates ({bills.length})
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Configure due dates (1-31). Autopilot automatically clamps short months (Feb 28/29).
+                    </span>
+                  </div>
+                </div>
+
+                {/* Column Headers for Desktop */}
+                <div className="hidden sm:grid grid-cols-12 gap-3 px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-900/40 rounded-lg border border-slate-800/60">
+                  <div className="col-span-5">Bill / Payment Label</div>
+                  <div className="col-span-2">Amount (₹)</div>
+                  <div className="col-span-2 text-center">Due Date (Day 1-31)</div>
+                  <div className="col-span-2">Priority Level</div>
+                  <div className="col-span-1 text-center">Action</div>
                 </div>
 
                 <div className="space-y-3">
                   {bills.map((item, index) => (
                     <div
                       key={item.id}
-                      className="p-3.5 sm:p-4 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+                      className="p-3.5 sm:p-4 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all flex flex-col sm:grid sm:grid-cols-12 sm:items-center gap-3"
                     >
                       {/* Bill Name */}
-                      <div className="flex-1">
+                      <div className="col-span-5">
                         <label className="block text-[10px] text-slate-400 mb-1 font-medium sm:hidden">
-                          Bill Name
+                          Bill / Payment Label
                         </label>
                         <input
                           type="text"
                           required
                           value={item.name}
                           onChange={(e) => handleUpdateBillField(item.id, 'name', e.target.value)}
-                          placeholder="e.g. Rent or WiFi"
+                          placeholder="e.g. House Rent or WiFi"
                           className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
                         />
                       </div>
 
                       {/* Amount */}
-                      <div className="w-full sm:w-28">
+                      <div className="col-span-2">
                         <label className="block text-[10px] text-slate-400 mb-1 font-medium sm:hidden">
                           Amount (₹)
                         </label>
-                        <input
-                          type="number"
-                          required
-                          value={item.amount}
-                          onChange={(e) => handleUpdateBillField(item.id, 'amount', e.target.value)}
-                          placeholder="₹ Amount"
-                          className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
-                        />
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">₹</span>
+                          <input
+                            type="number"
+                            required
+                            value={item.amount}
+                            onChange={(e) => handleUpdateBillField(item.id, 'amount', e.target.value)}
+                            placeholder="15000"
+                            className="w-full pl-6 pr-2 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
                       </div>
 
-                      {/* Due Day */}
-                      <div className="w-full sm:w-20">
+                      {/* Due Date (1-31) */}
+                      <div className="col-span-2">
                         <label className="block text-[10px] text-slate-400 mb-1 font-medium sm:hidden">
-                          Due Day
+                          Due Date (1-31 of month)
                         </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="31"
-                          required
-                          value={item.dueDate}
-                          onChange={(e) => handleUpdateBillField(item.id, 'dueDate', e.target.value)}
-                          placeholder="Day"
-                          title="Due day of month (1-31)"
-                          className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500 text-center"
-                        />
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="1"
+                            max="31"
+                            required
+                            value={item.dueDate}
+                            onChange={(e) => handleUpdateBillField(item.id, 'dueDate', e.target.value)}
+                            placeholder="Day 1"
+                            title="Due day of month (1-31)"
+                            className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white text-center focus:outline-none focus:border-emerald-500 font-semibold"
+                          />
+                        </div>
                       </div>
 
                       {/* Priority */}
-                      <div className="w-full sm:w-28">
+                      <div className="col-span-2">
                         <label className="block text-[10px] text-slate-400 mb-1 font-medium sm:hidden">
                           Priority
                         </label>
@@ -634,22 +650,24 @@ export default function OnboardingPage() {
                           onChange={(e: any) => handleUpdateBillField(item.id, 'priority', e.target.value)}
                           className="w-full px-2.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
                         >
-                          <option value="critical">Critical</option>
-                          <option value="high">High</option>
-                          <option value="essential">Essential</option>
+                          <option value="critical">Critical (Rent/EMI)</option>
+                          <option value="high">High (Parents/WiFi)</option>
+                          <option value="essential">Essential (Living)</option>
                           <option value="discretionary">Optional</option>
                         </select>
                       </div>
 
                       {/* Delete */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveBill(item.id)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors self-end sm:self-center"
-                        title="Remove bill"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="col-span-1 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBill(item.id)}
+                          className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+                          title="Remove bill"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
