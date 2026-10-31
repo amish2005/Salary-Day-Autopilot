@@ -175,3 +175,4 @@ ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
 
 -- Note: In Clerk + Supabase integration, requests from backend server actions
 -- authenticate with the Supabase Service Role or verified Clerk user ID claim.
+

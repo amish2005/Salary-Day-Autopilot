@@ -444,3 +444,4 @@ export function DashboardView({ initialData }: DashboardViewProps) {
     </div>
   );
 }
+

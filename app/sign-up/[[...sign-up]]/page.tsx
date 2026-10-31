@@ -3,8 +3,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { SignUp } from '@clerk/nextjs';
 import { ShieldCheck, ArrowRight } from 'lucide-react';
 import { seedArjunProfileAction } from '@/app/actions/finance-actions';
+
+const hasClerkKey = Boolean(
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith('pk_')
+);
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -13,6 +19,49 @@ export default function SignUpPage() {
     await seedArjunProfileAction();
     router.push('/onboarding');
   };
+
+  if (hasClerkKey) {
+    return (
+      <div className="min-h-screen bg-[#090d16] flex flex-col items-center justify-center p-4">
+        <Link href="/" className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-950/40">
+            <ShieldCheck className="w-6 h-6 text-slate-950" />
+          </div>
+          <div>
+            <div className="font-semibold text-slate-100 text-sm">Salary Day Autopilot</div>
+            <div className="text-[11px] text-slate-400">Create Account</div>
+          </div>
+        </Link>
+
+        <SignUp
+          routing="path"
+          path="/sign-up"
+          signInUrl="/sign-in"
+          fallbackRedirectUrl="/onboarding"
+          appearance={{
+            elements: {
+              card: 'bg-[#0f172a] border border-slate-800 shadow-2xl rounded-2xl',
+              headerTitle: 'text-white font-bold',
+              headerSubtitle: 'text-slate-400 text-xs',
+              formButtonPrimary: 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold',
+              formFieldInput: 'bg-slate-900 border-slate-700 text-white',
+              formFieldLabel: 'text-slate-300 text-xs',
+              footerActionLink: 'text-emerald-400 hover:text-emerald-300',
+            },
+          }}
+        />
+
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleDemoSignUp}
+            className="text-xs text-slate-400 hover:text-emerald-400 transition-colors flex items-center gap-1.5 mx-auto"
+          >
+            <span>Or quick bypass to Arjun&apos;s demo profile &rarr;</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#090d16] flex items-center justify-center p-4">

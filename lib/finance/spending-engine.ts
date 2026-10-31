@@ -65,3 +65,4 @@ export function analyzeSpending(
     recentTransactions: sorted.slice(0, 10),
   };
 }
+

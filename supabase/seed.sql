@@ -53,3 +53,4 @@ VALUES
   ('act-003', 'demo_user_arjun', 'RESERVE_PROTECTION', 600000, '0', '600000', 'Protected ₹6,000 into Bike EMI Reserve for auto-debit on the 5th.', now() - interval '2 days'),
   ('act-004', 'demo_user_arjun', 'ANNUAL_RESERVE', 40000, '0', '40000', 'Allocated ₹400 towards annual bike insurance reserve due in February.', now() - interval '1 day')
 ON CONFLICT (id) DO NOTHING;
+

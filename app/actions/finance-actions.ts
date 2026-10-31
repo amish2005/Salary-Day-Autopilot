@@ -21,6 +21,21 @@ export async function getCompleteFinancialDataAction() {
     profile = await repo.getProfile(userId);
   }
 
+  if (!profile) {
+    profile = {
+      id: `prof-${userId}`,
+      user_id: userId,
+      full_name: 'Arjun',
+      city: 'Chennai',
+      currency: 'INR',
+      monthly_salary: 4500000,
+      salary_date: 7,
+      salary_frequency: 'monthly',
+      current_balance: 4500000,
+      onboarding_completed: true,
+    };
+  }
+
   const [bills, incomeSources, creditCards, savingsGoals, transactions, activities] = await Promise.all([
     repo.getBills(userId),
     repo.getIncomeSources(userId),
@@ -494,3 +509,105 @@ export async function updateProfileSettingsAction(updates: Partial<ProfileData>)
   revalidatePath('/dashboard');
   return saved;
 }
+
+/**
+ * Save Complete Custom Onboarding Data (Dynamic bills and income sources)
+ */
+export async function saveCustomOnboardingAction({
+  profile,
+  bills,
+  incomeSources,
+}: {
+  profile: {
+    fullName: string;
+    city: string;
+    monthlySalaryPaise: number;
+    salaryDate: number;
+    currentBalancePaise: number;
+  };
+  bills: Array<{
+    name: string;
+    amountPaise: number;
+    dueDate: number;
+    recurrence: 'monthly' | 'annual';
+    category: string;
+    priority: 'critical' | 'high' | 'essential' | 'discretionary';
+  }>;
+  incomeSources?: Array<{
+    name: string;
+    amountPaise: number;
+    expectedDate: number;
+    isVariable: boolean;
+  }>;
+}) {
+  const userId = await getCurrentUserId();
+
+  // 1. Upsert profile
+  await repo.upsertProfile(userId, {
+    full_name: profile.fullName,
+    city: profile.city,
+    currency: 'INR',
+    monthly_salary: profile.monthlySalaryPaise,
+    salary_date: profile.salaryDate,
+    current_balance: profile.currentBalancePaise,
+    onboarding_completed: true,
+  });
+
+  // 2. Add base salary income source
+  await repo.addIncomeSource(userId, {
+    name: 'Primary Salary',
+    amount: profile.monthlySalaryPaise,
+    expected_date: profile.salaryDate,
+    frequency: 'monthly',
+    is_variable: false,
+    status: 'received',
+    notes: 'Primary monthly employment income',
+  });
+
+  // 3. Add all custom dynamic bills
+  for (const bill of bills) {
+    if (bill.name && bill.amountPaise > 0) {
+      await repo.addBill(userId, {
+        name: bill.name,
+        amount: bill.amountPaise,
+        due_date: bill.dueDate || 1,
+        recurrence: bill.recurrence || 'monthly',
+        category: bill.category || 'Living',
+        priority: bill.priority || 'high',
+        is_paid: false,
+      });
+    }
+  }
+
+  // 4. Add any custom income sources (e.g. roommate contribution, freelance)
+  if (incomeSources && incomeSources.length > 0) {
+    for (const inc of incomeSources) {
+      if (inc.name && inc.amountPaise > 0) {
+        await repo.addIncomeSource(userId, {
+          name: inc.name,
+          amount: inc.amountPaise,
+          expected_date: inc.expectedDate || 15,
+          frequency: 'monthly',
+          is_variable: inc.isVariable || false,
+          status: 'expected',
+        });
+      }
+    }
+  }
+
+  // 5. Initial log
+  await repo.logActivity(userId, {
+    action_type: 'ONBOARDING_COMPLETED',
+    amount: profile.monthlySalaryPaise,
+    previous_state: 'Setup',
+    new_state: 'Autopilot Active',
+    explanation: `Custom profile activated: ${formatRupees(profile.monthlySalaryPaise)} salary with ${bills.length} custom bills configured.`,
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath('/bills');
+  revalidatePath('/my-money');
+  revalidatePath('/spending');
+  return { success: true };
+}
+

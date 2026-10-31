@@ -12,8 +12,17 @@ let clerkHandler: any = null;
 export default async function middleware(req: NextRequest) {
   if (hasClerkKeys) {
     if (!clerkHandler) {
-      const { clerkMiddleware } = await import('@clerk/nextjs/server');
-      clerkHandler = clerkMiddleware();
+      const { clerkMiddleware, createRouteMatcher } = await import('@clerk/nextjs/server');
+      const isPublicRoute = createRouteMatcher([
+        '/',
+        '/sign-in(.*)',
+        '/sign-up(.*)',
+      ]);
+      clerkHandler = clerkMiddleware(async (auth, request) => {
+        if (!isPublicRoute(request)) {
+          await auth.protect();
+        }
+      });
     }
     return clerkHandler(req);
   }

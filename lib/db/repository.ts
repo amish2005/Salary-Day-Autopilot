@@ -47,8 +47,8 @@ export async function getProfile(userId: string): Promise<ProfileData | null> {
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error) {
-      console.error('Supabase getProfile error:', error);
+    if (error || !data) {
+      if (error) console.error('Supabase getProfile error:', error);
       return getOrCreateUserStore(userId).profile;
     }
     return data;
@@ -604,3 +604,4 @@ export async function seedArjunProfile(userId: string): Promise<void> {
     explanation: 'Allocated ₹400 towards annual bike insurance renewal due in February.',
   });
 }
+

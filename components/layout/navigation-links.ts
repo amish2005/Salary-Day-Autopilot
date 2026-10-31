@@ -52,3 +52,4 @@ export const navigationLinks = [
     description: 'Salary dates, holidays & profile',
   },
 ];
+

@@ -334,3 +334,4 @@ export function BillsView({ bills }: BillsViewProps) {
     </div>
   );
 }
+

@@ -238,3 +238,4 @@ export function SettingsView({ profile, transactions, bills }: SettingsViewProps
     </div>
   );
 }
+

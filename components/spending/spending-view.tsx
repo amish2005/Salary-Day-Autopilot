@@ -436,3 +436,4 @@ export function SpendingView({ summary, transactions, creditCards }: SpendingVie
     </div>
   );
 }
+

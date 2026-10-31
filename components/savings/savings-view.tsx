@@ -217,3 +217,4 @@ export function SavingsView({ summary, savingsGoals }: SavingsViewProps) {
     </div>
   );
 }
+

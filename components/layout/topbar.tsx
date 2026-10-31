@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { ShieldAlert, ShieldCheck, AlertTriangle, RotateCcw, User, Sparkles, TrendingDown, ArrowRight } from 'lucide-react';
 import { seedArjunProfileAction, recordSalaryArrivalAction } from '@/app/actions/finance-actions';
 
+import { UserNav } from '@/components/auth/user-nav';
+
 interface TopbarProps {
   healthStatus?: 'healthy' | 'needs_attention' | 'critical';
   healthReason?: string;
@@ -82,15 +84,9 @@ export function Topbar({
         </button>
 
         {/* User Profile Pill */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-          <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-semibold text-emerald-400">
-            {userName.charAt(0).toUpperCase()}
-          </div>
-          <span className="hidden md:inline text-xs font-medium text-slate-300">
-            {userName}
-          </span>
-        </div>
+        <UserNav fallbackName={userName} />
       </div>
     </header>
   );
 }
+
