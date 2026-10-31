@@ -61,6 +61,91 @@ export function clampDueDateToMonth(dayOfMonth: number, year: number, month: num
   return Math.min(Math.max(1, dayOfMonth), maxDays);
 }
 
+export interface SalaryShiftResult {
+  adjustedDay: number;
+  originalDay: number;
+  adjustedDate: Date;
+  isShifted: boolean;
+  shiftReason?: string;
+  dayName: string;
+}
+
+/**
+ * Calculates the adjusted salary arrival date for a given month.
+ * If the salary date falls on a weekend (Saturday or Sunday),
+ * shifts to the next nearest weekday for that month (e.g. Saturday/Sunday -> Monday,
+ * or Friday if moving forward would cross into the next month).
+ */
+export function getAdjustedSalaryDayForMonth(
+  expectedDay: number,
+  year: number,
+  month: number // 1-12
+): SalaryShiftResult {
+  const daysInMonth = getDaysInMonth(new Date(year, month - 1, 1));
+  const clampedDay = Math.min(Math.max(1, expectedDay), daysInMonth);
+  const date = new Date(year, month - 1, clampedDay);
+  const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
+
+  if (dayOfWeek === 6) {
+    // Saturday: next weekday is Monday (+2 days)
+    if (clampedDay + 2 <= daysInMonth) {
+      const adjustedDate = new Date(year, month - 1, clampedDay + 2);
+      return {
+        adjustedDay: clampedDay + 2,
+        originalDay: clampedDay,
+        adjustedDate,
+        isShifted: true,
+        shiftReason: `Shifted from Saturday (${clampedDay}th) to next weekday Monday (${clampedDay + 2}th).`,
+        dayName: 'Monday',
+      };
+    } else {
+      // If Monday is in next month, shift to previous Friday (-1 day) to stay in that month
+      const adjustedDate = new Date(year, month - 1, clampedDay - 1);
+      return {
+        adjustedDay: clampedDay - 1,
+        originalDay: clampedDay,
+        adjustedDate,
+        isShifted: true,
+        shiftReason: `Shifted from weekend (${clampedDay}th) to nearest weekday Friday (${clampedDay - 1}th) for this month.`,
+        dayName: 'Friday',
+      };
+    }
+  } else if (dayOfWeek === 0) {
+    // Sunday: next weekday is Monday (+1 day)
+    if (clampedDay + 1 <= daysInMonth) {
+      const adjustedDate = new Date(year, month - 1, clampedDay + 1);
+      return {
+        adjustedDay: clampedDay + 1,
+        originalDay: clampedDay,
+        adjustedDate,
+        isShifted: true,
+        shiftReason: `Shifted from Sunday (${clampedDay}th) to next weekday Monday (${clampedDay + 1}th).`,
+        dayName: 'Monday',
+      };
+    } else {
+      // If Sunday is last day of month, shift to Friday (-2 days) to stay in that month
+      const adjustedDate = new Date(year, month - 1, clampedDay - 2);
+      return {
+        adjustedDay: clampedDay - 2,
+        originalDay: clampedDay,
+        adjustedDate,
+        isShifted: true,
+        shiftReason: `Shifted from weekend (${clampedDay}th) to nearest weekday Friday (${clampedDay - 2}th) for this month.`,
+        dayName: 'Friday',
+      };
+    }
+  }
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return {
+    adjustedDay: clampedDay,
+    originalDay: clampedDay,
+    adjustedDate: date,
+    isShifted: false,
+    dayName: dayNames[dayOfWeek],
+  };
+}
+
 /**
  * Calculates the actual salary arrival date.
  * If expected date falls on a weekend (Sat/Sun) or configured holiday,
@@ -87,6 +172,7 @@ export function getAdjustedSalaryDate(
 
 /**
  * Calculates days remaining until the next expected salary date.
+ * Takes into account weekend salary shifts for each monthly cycle.
  */
 export function getDaysRemainingUntilSalary(
   salaryDay: number,
@@ -96,15 +182,17 @@ export function getDaysRemainingUntilSalary(
   const currentMonth = referenceDate.getMonth() + 1;
   const currentYear = referenceDate.getFullYear();
 
-  let targetDate: Date;
+  const thisMonthShift = getAdjustedSalaryDayForMonth(salaryDay, currentYear, currentMonth);
 
-  if (currentDay < salaryDay) {
-    targetDate = new Date(currentYear, currentMonth - 1, clampDueDateToMonth(salaryDay, currentYear, currentMonth));
+  let targetDate: Date;
+  if (currentDay < thisMonthShift.adjustedDay) {
+    targetDate = thisMonthShift.adjustedDate;
   } else {
-    // Next month's salary
+    // Next month's adjusted salary date
     const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
     const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-    targetDate = new Date(nextYear, nextMonth - 1, clampDueDateToMonth(salaryDay, nextYear, nextMonth));
+    const nextMonthShift = getAdjustedSalaryDayForMonth(salaryDay, nextYear, nextMonth);
+    targetDate = nextMonthShift.adjustedDate;
   }
 
   const diffTime = targetDate.getTime() - referenceDate.getTime();

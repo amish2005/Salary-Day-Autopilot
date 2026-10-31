@@ -14,10 +14,11 @@ import { analyzeSpending } from './spending-engine';
 import { calculateCreditCardLiabilities } from './credit-card-engine';
 import { evaluateSavingsGoals } from './savings-engine';
 import { scheduleBills } from './bill-scheduler';
-import { formatRupees } from './date-utils';
+import { formatRupees, getAdjustedSalaryDayForMonth, SalaryShiftResult } from './date-utils';
 
 export interface CompleteFinancialSummary {
   profile: ProfileData;
+  salaryShift?: SalaryShiftResult;
   allocationPlan: AllocationPlan;
   bankBalancePaise: number;
   availableToSpendPaise: number;
@@ -165,8 +166,11 @@ export function buildFinancialSummary(
     statusText: `Your bike insurance is coming up in February. ${formatRupees(insuranceBill?.amount || 480000)} will be needed.`,
   };
 
+  const salaryShift = getAdjustedSalaryDayForMonth(profile.salary_date, currentYear, currentMonth);
+
   return {
     profile,
+    salaryShift,
     allocationPlan,
     bankBalancePaise: profile.current_balance,
     availableToSpendPaise: allocationPlan.flexibleSpendingPaise,

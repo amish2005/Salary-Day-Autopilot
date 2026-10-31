@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatRupees, clampDueDateToMonth, getAdjustedSalaryDate, paiseToRupees, rupeesToPaise } from '../date-utils';
+import { formatRupees, clampDueDateToMonth, getAdjustedSalaryDate, getAdjustedSalaryDayForMonth, paiseToRupees, rupeesToPaise } from '../date-utils';
 import { evaluateSalary, calculateIncomeBreakdown } from '../salary-calculator';
 import { scheduleBills } from '../bill-scheduler';
 import { analyzeUnexpectedExpense } from '../emergency-engine';
@@ -40,6 +40,39 @@ describe('Financial Engine - Format & Date Utilities', () => {
     // Nov 9, 2026 is Monday, but if it is declared holiday, moves to Tuesday Nov 10
     const adjustedDate = getAdjustedSalaryDate(7, 2026, 11, ['2026-11-09']);
     expect(adjustedDate.getDate()).toBe(10);
+  });
+
+  it('Weekend Salary Shift: Shifts Saturday to next weekday Monday for that month (e.g. Oct 3, 2026 -> Oct 5)', () => {
+    // Oct 3, 2026 is Saturday -> next nearest weekday is Monday Oct 5
+    const shiftSat = getAdjustedSalaryDayForMonth(3, 2026, 10);
+    expect(shiftSat.isShifted).toBe(true);
+    expect(shiftSat.originalDay).toBe(3);
+    expect(shiftSat.adjustedDay).toBe(5);
+    expect(shiftSat.dayName).toBe('Monday');
+  });
+
+  it('Weekend Salary Shift: Shifts Sunday to next weekday Monday for that month (e.g. Oct 4, 2026 -> Oct 5)', () => {
+    // Oct 4, 2026 is Sunday -> next nearest weekday is Monday Oct 5
+    const shiftSun = getAdjustedSalaryDayForMonth(4, 2026, 10);
+    expect(shiftSun.isShifted).toBe(true);
+    expect(shiftSun.originalDay).toBe(4);
+    expect(shiftSun.adjustedDay).toBe(5);
+    expect(shiftSun.dayName).toBe('Monday');
+  });
+
+  it('Weekend Salary Shift: Regular weekday remains unshifted', () => {
+    // Oct 7, 2026 is Wednesday
+    const shiftWed = getAdjustedSalaryDayForMonth(7, 2026, 10);
+    expect(shiftWed.isShifted).toBe(false);
+    expect(shiftWed.adjustedDay).toBe(7);
+  });
+
+  it('Weekend Salary Shift: End-of-month weekend shifts to nearest weekday in that month', () => {
+    // Oct 31, 2026 is Saturday. Monday would be Nov 2 (next month), so it shifts to Friday Oct 30
+    const shiftEnd = getAdjustedSalaryDayForMonth(31, 2026, 10);
+    expect(shiftEnd.isShifted).toBe(true);
+    expect(shiftEnd.adjustedDay).toBe(30);
+    expect(shiftEnd.dayName).toBe('Friday');
   });
 });
 

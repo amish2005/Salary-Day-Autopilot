@@ -35,7 +35,7 @@ import {
   RotateCcw,
   SkipForward,
 } from 'lucide-react';
-import { formatRupees } from '@/lib/finance/date-utils';
+import { formatRupees, getAdjustedSalaryDayForMonth } from '@/lib/finance/date-utils';
 import { CompleteFinancialSummary } from '@/lib/finance/financial-summary';
 import { BillData, TransactionData, IncomeSourceData } from '@/lib/finance/types';
 import {
@@ -109,14 +109,22 @@ export function DashboardView({ initialData }: DashboardViewProps) {
   const [expenseCategory, setExpenseCategory] = useState('Health');
   const [expenseMethod, setExpenseMethod] = useState<'bank' | 'cash' | 'credit_card'>('bank');
 
+  // Date calculation: evaluate if salary date falls on a weekend and shifts to next nearest weekday for this month
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const salaryShiftInfo = summary.salaryShift || getAdjustedSalaryDayForMonth(profile.salary_date, currentYear, currentMonth);
+  const effectiveSalaryDay = salaryShiftInfo.adjustedDay;
+
   // Build full list of all income sources for this user
   const rawSalary = incomeSources.find((s) => s.name.toLowerCase().includes('salary'));
-  const effectivePrimarySalary: IncomeSourceData = rawSalary || {
-    id: 'primary-salary-source',
+  const effectivePrimarySalary: IncomeSourceData = {
+    id: rawSalary?.id || 'primary-salary-source',
     user_id: profile.user_id,
     name: 'Primary Salary',
-    amount: profile.monthly_salary,
-    expected_date: profile.salary_date,
+    amount: rawSalary?.amount || profile.monthly_salary,
+    received_amount: rawSalary?.received_amount || profile.monthly_salary,
+    expected_date: effectiveSalaryDay,
     frequency: 'monthly',
     is_variable: false,
     status: profile.salary_received_this_month ? 'received' : 'expected',
@@ -439,9 +447,15 @@ export function DashboardView({ initialData }: DashboardViewProps) {
                 </span>
               </span>
 
-              <span className="text-[11px] text-slate-400">
-                Expected: {currentIncome.expected_date}th of month
-              </span>
+              {currentIncome.name.toLowerCase().includes('salary') && salaryShiftInfo.isShifted ? (
+                <span className="text-[11px] text-amber-300 font-medium bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  Expected: {salaryShiftInfo.adjustedDay}th ({salaryShiftInfo.dayName}) • {salaryShiftInfo.shiftReason}
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-400">
+                  Expected: {currentIncome.expected_date}th of month
+                </span>
+              )}
 
               {pendingIncomes.length > 1 && (
                 <div className="flex items-center gap-1 ml-auto md:ml-2">

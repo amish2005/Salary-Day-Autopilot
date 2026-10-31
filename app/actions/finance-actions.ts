@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import * as repo from '@/lib/db/repository';
 import { buildFinancialSummary } from '@/lib/finance/financial-summary';
 import { analyzeUnexpectedExpense } from '@/lib/finance/emergency-engine';
-import { formatRupees } from '@/lib/finance/date-utils';
+import { formatRupees, getAdjustedSalaryDayForMonth } from '@/lib/finance/date-utils';
 import { evaluateAutopay } from '@/lib/finance/autopay-engine';
 import { BillData, TransactionData, SavingsGoalData, CreditCardData, IncomeSourceData, ProfileData } from '@/lib/finance/types';
 import { revalidatePath } from 'next/cache';
@@ -202,6 +202,10 @@ export async function recordSalaryArrivalAction({
   });
 
   // Mark monthly salary income source as received
+  const now = new Date();
+  const shiftInfo = getAdjustedSalaryDayForMonth(profile.salary_date, now.getFullYear(), now.getMonth() + 1);
+  const effectiveSalaryDay = shiftInfo.adjustedDay;
+
   const incomeSources = await repo.getIncomeSources(userId);
   let salarySource = incomeSources.find((s) => s.name.toLowerCase().includes('salary'));
   if (salarySource) {
@@ -216,7 +220,7 @@ export async function recordSalaryArrivalAction({
     await repo.addIncomeSource(userId, {
       name: 'Primary Salary',
       amount: actualSalaryPaise,
-      expected_date: profile.salary_date,
+      expected_date: effectiveSalaryDay,
       frequency: 'monthly',
       is_variable: false,
       status: 'received',
@@ -228,6 +232,9 @@ export async function recordSalaryArrivalAction({
 
   // Generate intelligent traceable activity log
   let explanation = `Salary of ${formatRupees(actualSalaryPaise)} received and credited to balance.`;
+  if (shiftInfo.isShifted) {
+    explanation += ` (${shiftInfo.shiftReason})`;
+  }
   if (shortfallPaise > 0) {
     const flexibleTrim = Math.min(shortfallPaise, 600000);
     const savingsTrim = Math.max(0, shortfallPaise - flexibleTrim);

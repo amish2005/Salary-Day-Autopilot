@@ -114,7 +114,15 @@ export function MyMoneyView({ summary, incomeSources }: MyMoneyViewProps) {
           <div>
             <h2 className="text-base font-bold text-white">Record Monthly Salary Credit</h2>
             <p className="text-xs text-slate-400">
-              Expected: {formatRupees(summary.profile.monthly_salary)} on the {summary.profile.salary_date}th of every month
+              Expected: {formatRupees(summary.profile.monthly_salary)} on the{' '}
+              {summary.salaryShift?.isShifted ? (
+                <span className="text-amber-300 font-medium">
+                  {summary.salaryShift.adjustedDay}th ({summary.salaryShift.dayName}, shifted from weekend {summary.salaryShift.originalDay}th)
+                </span>
+              ) : (
+                `${summary.profile.salary_date}th`
+              )}{' '}
+              of this month
             </p>
           </div>
         </div>
