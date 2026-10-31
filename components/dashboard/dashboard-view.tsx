@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { formatRupees, getAdjustedSalaryDayForMonth } from '@/lib/finance/date-utils';
 import { CompleteFinancialSummary } from '@/lib/finance/financial-summary';
-import { BillData, TransactionData, IncomeSourceData } from '@/lib/finance/types';
+import { BillData, TransactionData, IncomeSourceData, SavingsGoalData } from '@/lib/finance/types';
 import {
   toggleBillPaidAction,
   updateRoommateContributionAction,
@@ -49,6 +49,7 @@ import {
   confirmIncomeArrivalAction,
   addIncomeSourceAction,
   toggleBillAutopayAction,
+  contributeToSavingsGoalAction,
 } from '@/app/actions/finance-actions';
 
 interface DashboardViewProps {
@@ -58,14 +59,17 @@ interface DashboardViewProps {
     incomeSources?: IncomeSourceData[];
     transactions: TransactionData[];
     summary: CompleteFinancialSummary;
+    savingsGoals?: SavingsGoalData[];
   };
 }
 
 export function DashboardView({ initialData }: DashboardViewProps) {
   const router = useRouter();
   const { user } = useUser();
-  const { profile, bills, summary, incomeSources = [] } = initialData;
+  const { profile, bills, summary, incomeSources = [], savingsGoals = [] } = initialData;
   const [loadingBillId, setLoadingBillId] = useState<string | null>(null);
+  const [isAddSavingsModalOpen, setIsAddSavingsModalOpen] = useState(false);
+  const [savingsDepositInput, setSavingsDepositInput] = useState('');
 
   // If user is logged into Clerk (e.g. Amish Sharma), use their authentic name over placeholder 'Arjun'
   const displayName =
@@ -218,6 +222,32 @@ export function DashboardView({ initialData }: DashboardViewProps) {
   const handleSkipIncome = (incomeId: string) => {
     setSkippedIncomeIds((prev) => [...prev, incomeId]);
     setStatusNotification('Notification hidden for this session. (It will reappear upon reload).');
+  };
+
+  // Quick deposit into primary savings goal
+  const handleDepositSavings = async () => {
+    const amountRupees = Number(savingsDepositInput);
+    if (!amountRupees || amountRupees <= 0) return;
+    const paise = Math.round(amountRupees * 100);
+
+    const goalId = summary.savingsStatus.primaryGoal?.id || savingsGoals[0]?.id;
+    if (!goalId) {
+      alert('No active savings goal found. Please create one on the Savings page.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await contributeToSavingsGoalAction(goalId, paise);
+      setStatusNotification(`Successfully deposited ${formatRupees(paise)} into "${summary.savingsStatus.primaryGoal?.title || 'Savings'}"!`);
+      setIsAddSavingsModalOpen(false);
+      setSavingsDepositInput('');
+      router.refresh();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 4. Create New Income Source
@@ -603,11 +633,6 @@ export function DashboardView({ initialData }: DashboardViewProps) {
               <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
                 {formatRupees(summary.availableToSpendPaise)}
               </span>
-              {summary.dailySpendingPaise > 0 && (
-                <span className="text-xs sm:text-sm font-semibold text-emerald-400">
-                  ({formatRupees(summary.dailySpendingPaise)} / day)
-                </span>
-              )}
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
@@ -1043,12 +1068,21 @@ export function DashboardView({ initialData }: DashboardViewProps) {
             </p>
           </div>
 
-          <Link
-            href="/savings"
-            className="w-full py-2 mt-4 text-center rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors block"
-          >
-            View Savings Roadmap
-          </Link>
+          <div className="flex items-center gap-2 mt-4">
+            <button
+              onClick={() => setIsAddSavingsModalOpen(true)}
+              className="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Money</span>
+            </button>
+            <Link
+              href="/savings"
+              className="flex-1 py-2 text-center rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors block"
+            >
+              Roadmap
+            </Link>
+          </div>
         </div>
 
         {/* Credit Card Liability Tracker */}
@@ -1589,6 +1623,106 @@ export function DashboardView({ initialData }: DashboardViewProps) {
                 className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors"
               >
                 Confirm &amp; Reallocate Reserves
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add Money to Savings Goal Modal */}
+      {isAddSavingsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => {
+                setIsAddSavingsModalOpen(false);
+                setSavingsDepositInput('');
+              }}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                <PiggyBank className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white">
+                  Add Money to {summary.savingsStatus.primaryGoal?.title || 'Savings Goal'}
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Transfer funds from your bank balance directly into this goal.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 my-4 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Current Goal Balance:</span>
+              <span className="font-bold text-emerald-400">
+                {formatRupees(summary.savingsStatus.primaryGoal?.currentPaise || 0)}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 mb-4 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Available Bank Balance:</span>
+              <span className="font-bold text-white">{formatRupees(summary.bankBalancePaise)}</span>
+            </div>
+
+            {/* Quick Amount Presets */}
+            <div className="mb-4">
+              <span className="text-[11px] font-semibold text-slate-400 block mb-1.5">Quick Presets:</span>
+              <div className="grid grid-cols-4 gap-2">
+                {[500, 1000, 2000, 5000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setSavingsDepositInput(String(amt))}
+                    className="py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 hover:border-emerald-500/50 transition-colors"
+                  >
+                    +₹{amt.toLocaleString('en-IN')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                Amount to Deposit (₹)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={savingsDepositInput}
+                  onChange={(e) => setSavingsDepositInput(e.target.value)}
+                  placeholder="e.g. 2000"
+                  className="w-full pl-8 pr-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-emerald-500 font-semibold"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddSavingsModalOpen(false);
+                  setSavingsDepositInput('');
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting || !savingsDepositInput || Number(savingsDepositInput) <= 0}
+                onClick={handleDepositSavings}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                {isSubmitting ? 'Depositing...' : 'Confirm Deposit'}
               </button>
             </div>
           </div>
