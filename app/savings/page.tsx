@@ -15,6 +15,7 @@ export default async function SavingsPage() {
       <SavingsView
         summary={data.summary}
         savingsGoals={data.savingsGoals}
+        bills={data.bills}
       />
     </AppShell>
   );

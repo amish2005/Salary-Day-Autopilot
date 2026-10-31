@@ -71,9 +71,11 @@ export interface SavingsGoalData {
   title: string;
   target_amount: number; // in paise
   current_amount: number; // in paise
+  monthly_contribution?: number; // in paise (configured monthly savings target)
   target_date: string; // ISO string or YYYY-MM
   is_paused: boolean;
   priority: number;
+  notes?: string;
 }
 
 export interface TransactionData {

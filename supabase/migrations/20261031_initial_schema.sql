@@ -41,12 +41,15 @@ CREATE TABLE IF NOT EXISTS bills (
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   amount BIGINT NOT NULL, -- in paise
+  paid_amount BIGINT DEFAULT 0, -- in paise (for partial payments)
   due_date INTEGER NOT NULL CHECK (due_date BETWEEN 1 AND 31),
   recurrence TEXT DEFAULT 'monthly' CHECK (recurrence IN ('monthly', 'annual')),
   annual_month INTEGER CHECK (annual_month BETWEEN 1 AND 12),
   category TEXT NOT NULL,
   priority TEXT NOT NULL CHECK (priority IN ('critical', 'high', 'essential', 'discretionary')),
   is_paid BOOLEAN DEFAULT false,
+  is_ignored BOOLEAN DEFAULT false,
+  is_autopay BOOLEAN DEFAULT false,
   paid_date TIMESTAMPTZ,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -98,9 +101,11 @@ CREATE TABLE IF NOT EXISTS savings_goals (
   title TEXT NOT NULL,
   target_amount BIGINT NOT NULL, -- in paise
   current_amount BIGINT NOT NULL DEFAULT 0, -- in paise
+  monthly_contribution BIGINT DEFAULT 0, -- in paise (target monthly savings)
   target_date TEXT NOT NULL,
   is_paused BOOLEAN DEFAULT false,
   priority INTEGER DEFAULT 1,
+  notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

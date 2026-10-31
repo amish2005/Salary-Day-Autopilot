@@ -237,4 +237,24 @@ describe('Financial Engine - Mandatory Edge Cases', () => {
     expect(result.skippedBills.length).toBe(1);
     expect(result.newBalancePaise).toBe(100000); // balance untouched
   });
+
+  it('Savings Engine: Honors configured monthly savings target', () => {
+    const goals: SavingsGoalData[] = [
+      {
+        id: 'g-laptop',
+        user_id: 'user-arjun',
+        title: 'New Laptop',
+        target_amount: 6000000,
+        current_amount: 1200000,
+        monthly_contribution: 350000, // Custom ₹3,500/month configured by user
+        target_date: '2027-04',
+        is_paused: false,
+        priority: 1,
+      },
+    ];
+
+    const result = evaluateSavingsGoals(goals, 1000000, new Date('2026-10-01'));
+    expect(result.evaluatedGoals[0].suggestedMonthlyPaise).toBe(350000);
+    expect(result.evaluatedGoals[0].isAffordable).toBe(true);
+  });
 });

@@ -752,6 +752,173 @@ export async function togglePauseSavingsGoalAction(goalId: string, isPaused: boo
 }
 
 /**
+ * Withdraw money from a Savings Goal back to available bank balance
+ * For when user has pending payments/bills and insufficient bank balance
+ */
+export async function withdrawFromSavingsGoalAction({
+  goalId,
+  amountPaise,
+  reason,
+}: {
+  goalId: string;
+  amountPaise: number;
+  reason?: string;
+}) {
+  const userId = await getCurrentUserId();
+  const goals = await repo.getSavingsGoals(userId);
+  const targetGoal = goals.find((g) => g.id === goalId);
+  if (!targetGoal) throw new Error('Savings goal not found');
+  if (amountPaise <= 0) throw new Error('Withdrawal amount must be greater than zero');
+  if (targetGoal.current_amount < amountPaise) {
+    throw new Error(
+      `Cannot withdraw ${formatRupees(amountPaise)}. Goal only has ${formatRupees(targetGoal.current_amount)} saved.`
+    );
+  }
+
+  const profile = await repo.getProfile(userId);
+  if (!profile) throw new Error('Profile not found');
+
+  const newGoalBalance = targetGoal.current_amount - amountPaise;
+  const newBankBalance = profile.current_balance + amountPaise;
+
+  // 1. Update savings goal
+  await repo.updateSavingsGoal(userId, goalId, {
+    current_amount: newGoalBalance,
+  });
+
+  // 2. Credit to bank balance
+  await repo.upsertProfile(userId, {
+    current_balance: newBankBalance,
+  });
+
+  // 3. Log transparent activity
+  await repo.logActivity(userId, {
+    action_type: 'SAVINGS_WITHDRAWAL',
+    amount: amountPaise,
+    previous_state: formatRupees(targetGoal.current_amount),
+    new_state: formatRupees(newGoalBalance),
+    explanation: `Transferred ${formatRupees(amountPaise)} from ${targetGoal.title} to bank balance${
+      reason ? ` (${reason})` : ' to cover pending obligations'
+    }. Bank balance increased to ${formatRupees(newBankBalance)}.`,
+  });
+
+  revalidatePath('/savings');
+  revalidatePath('/dashboard');
+  revalidatePath('/bills');
+  revalidatePath('/activity');
+  return { success: true, newGoalBalance, newBankBalance };
+}
+
+/**
+ * Add a new savings goal with target and monthly contribution
+ */
+export async function addSavingsGoalAction(goal: {
+  title: string;
+  targetAmountPaise: number;
+  currentAmountPaise?: number;
+  monthlyContributionPaise?: number;
+  targetDate: string;
+  priority?: number;
+}) {
+  const userId = await getCurrentUserId();
+  const created = await repo.addSavingsGoal(userId, {
+    title: goal.title.trim(),
+    target_amount: goal.targetAmountPaise,
+    current_amount: goal.currentAmountPaise || 0,
+    monthly_contribution: goal.monthlyContributionPaise || 0,
+    target_date: goal.targetDate,
+    is_paused: false,
+    priority: goal.priority || 1,
+  });
+
+  await repo.logActivity(userId, {
+    action_type: 'SAVINGS_GOAL_CREATED',
+    amount: goal.targetAmountPaise,
+    previous_state: 'None',
+    new_state: goal.title,
+    explanation: `Created new savings goal: ${goal.title} with target ${formatRupees(goal.targetAmountPaise)} by ${
+      goal.targetDate
+    }${goal.monthlyContributionPaise ? ` (Target: ${formatRupees(goal.monthlyContributionPaise)}/mo)` : ''}.`,
+  });
+
+  revalidatePath('/savings');
+  revalidatePath('/dashboard');
+  revalidatePath('/activity');
+  return created;
+}
+
+/**
+ * Update an existing savings goal (configure monthly savings, target amount, date)
+ */
+export async function updateSavingsGoalAction(
+  goalId: string,
+  updates: {
+    title?: string;
+    targetAmountPaise?: number;
+    monthlyContributionPaise?: number;
+    targetDate?: string;
+    isPaused?: boolean;
+  }
+) {
+  const userId = await getCurrentUserId();
+  const existingGoals = await repo.getSavingsGoals(userId);
+  const goal = existingGoals.find((g) => g.id === goalId);
+  if (!goal) throw new Error('Savings goal not found');
+
+  const payload: Partial<SavingsGoalData> = {};
+  if (updates.title) payload.title = updates.title.trim();
+  if (updates.targetAmountPaise !== undefined) payload.target_amount = updates.targetAmountPaise;
+  if (updates.monthlyContributionPaise !== undefined) payload.monthly_contribution = updates.monthlyContributionPaise;
+  if (updates.targetDate) payload.target_date = updates.targetDate;
+  if (updates.isPaused !== undefined) payload.is_paused = updates.isPaused;
+
+  const updated = await repo.updateSavingsGoal(userId, goalId, payload);
+
+  await repo.logActivity(userId, {
+    action_type: 'SAVINGS_GOAL_UPDATED',
+    amount: payload.target_amount || goal.target_amount,
+    previous_state: goal.title,
+    new_state: payload.title || goal.title,
+    explanation: `Updated settings for ${payload.title || goal.title}: target ${formatRupees(
+      payload.target_amount || goal.target_amount
+    )}, configured monthly savings ${formatRupees(
+      payload.monthly_contribution !== undefined ? payload.monthly_contribution : (goal.monthly_contribution || 0)
+    )}/mo.`,
+  });
+
+  revalidatePath('/savings');
+  revalidatePath('/dashboard');
+  revalidatePath('/activity');
+  return updated;
+}
+
+/**
+ * Delete a savings goal
+ */
+export async function deleteSavingsGoalAction(goalId: string) {
+  const userId = await getCurrentUserId();
+  const existingGoals = await repo.getSavingsGoals(userId);
+  const goal = existingGoals.find((g) => g.id === goalId);
+
+  await repo.deleteSavingsGoal(userId, goalId);
+
+  if (goal) {
+    await repo.logActivity(userId, {
+      action_type: 'SAVINGS_GOAL_DELETED',
+      amount: goal.target_amount,
+      previous_state: goal.title,
+      new_state: 'Deleted',
+      explanation: `Removed savings goal: ${goal.title}.`,
+    });
+  }
+
+  revalidatePath('/savings');
+  revalidatePath('/dashboard');
+  revalidatePath('/activity');
+  return { success: true };
+}
+
+/**
  * Pay Credit Card
  */
 export async function payCreditCardAction(cardId: string, paymentAmountPaise: number) {

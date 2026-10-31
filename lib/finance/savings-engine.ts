@@ -49,7 +49,10 @@ export function evaluateSavingsGoals(
     const monthDiff = targetDateObj.getMonth() - referenceDate.getMonth();
     const monthsRemaining = Math.max(1, yearDiff * 12 + monthDiff);
 
-    const suggestedMonthlyPaise = Math.ceil(remainingTargetPaise / monthsRemaining);
+    const calculatedMonthlyPaise = Math.ceil(remainingTargetPaise / monthsRemaining);
+    const suggestedMonthlyPaise = goal.monthly_contribution && goal.monthly_contribution > 0
+      ? goal.monthly_contribution
+      : calculatedMonthlyPaise;
     totalSuggestedPaise += suggestedMonthlyPaise;
 
     const affordablePaise = Math.min(suggestedMonthlyPaise, remainingBudget);

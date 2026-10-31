@@ -450,6 +450,23 @@ export async function updateCreditCard(userId: string, id: string, updates: Part
 }
 
 // ---------------- SAVINGS GOALS ----------------
+function parseSavingsGoalRow(row: any): SavingsGoalData {
+  let monthlyContrib = row.monthly_contribution;
+  if ((monthlyContrib === undefined || monthlyContrib === null) && row.notes && typeof row.notes === 'string') {
+    try {
+      const match = row.notes.match(/__GOAL_META__(.*?)__GOAL_META__/);
+      if (match) {
+        const meta = JSON.parse(match[1]);
+        if (meta.monthly_contribution !== undefined) monthlyContrib = meta.monthly_contribution;
+      }
+    } catch {}
+  }
+  return {
+    ...row,
+    monthly_contribution: monthlyContrib !== undefined && monthlyContrib !== null ? Number(monthlyContrib) : undefined,
+  };
+}
+
 export async function getSavingsGoals(userId: string): Promise<SavingsGoalData[]> {
   if (isSupabaseConfigured() && supabaseServer) {
     const { data, error } = await supabaseServer
@@ -457,9 +474,9 @@ export async function getSavingsGoals(userId: string): Promise<SavingsGoalData[]
       .select('*')
       .eq('user_id', userId);
 
-    if (!error && data) return data;
+    if (!error && data) return data.map(parseSavingsGoalRow);
   }
-  return getOrCreateUserStore(userId).savingsGoals;
+  return getOrCreateUserStore(userId).savingsGoals.map(parseSavingsGoalRow);
 }
 
 export async function addSavingsGoal(userId: string, goal: Omit<SavingsGoalData, 'id' | 'user_id'>): Promise<SavingsGoalData> {
@@ -469,40 +486,95 @@ export async function addSavingsGoal(userId: string, goal: Omit<SavingsGoalData,
     user_id: userId,
   };
 
+  const metaNotes = goal.monthly_contribution
+    ? `${goal.notes || ''} __GOAL_META__${JSON.stringify({ monthly_contribution: goal.monthly_contribution })}__GOAL_META__`
+    : goal.notes;
+
+  const payloadToSave: any = {
+    ...newGoal,
+    notes: metaNotes,
+  };
+
   if (isSupabaseConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer.from('savings_goals').insert(newGoal).select().single();
+    let { data, error } = await supabaseServer.from('savings_goals').insert(payloadToSave).select().single();
+    if (error && error.message?.includes('column')) {
+      const { monthly_contribution, ...cleanPayload } = payloadToSave;
+      const retry = await supabaseServer.from('savings_goals').insert(cleanPayload).select().single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (!error && data) {
-      getOrCreateUserStore(userId).savingsGoals.push(data);
-      return data;
+      const parsed = parseSavingsGoalRow(data);
+      getOrCreateUserStore(userId).savingsGoals.push(parsed);
+      return parsed;
     }
   }
 
-  getOrCreateUserStore(userId).savingsGoals.push(newGoal);
-  return newGoal;
+  const parsed = parseSavingsGoalRow(payloadToSave);
+  getOrCreateUserStore(userId).savingsGoals.push(parsed);
+  return parsed;
 }
 
 export async function updateSavingsGoal(userId: string, id: string, updates: Partial<SavingsGoalData>): Promise<SavingsGoalData | null> {
+  const store = getOrCreateUserStore(userId);
+  const existing = store.savingsGoals.find((g) => g.id === id);
+
+  const mergedMonthly = updates.monthly_contribution !== undefined ? updates.monthly_contribution : existing?.monthly_contribution;
+  const rawNotes = updates.notes || existing?.notes || '';
+  const cleanNotes = rawNotes.replace(/__GOAL_META__.*?__GOAL_META__/g, '').trim();
+  const metaNotes = mergedMonthly
+    ? `${cleanNotes} __GOAL_META__${JSON.stringify({ monthly_contribution: mergedMonthly })}__GOAL_META__`
+    : cleanNotes;
+
+  const payload: any = {
+    ...updates,
+    notes: metaNotes,
+  };
+
   if (isSupabaseConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
+    let { data, error } = await supabaseServer
       .from('savings_goals')
-      .update(updates)
+      .update(payload)
       .eq('id', id)
       .eq('user_id', userId)
       .select()
       .single();
 
+    if (error && error.message?.includes('column')) {
+      const { monthly_contribution, ...cleanPayload } = payload;
+      const retry = await supabaseServer
+        .from('savings_goals')
+        .update(cleanPayload)
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (!error && data) {
-      const store = getOrCreateUserStore(userId);
-      store.savingsGoals = store.savingsGoals.map((g) => (g.id === id ? data : g));
-      return data;
+      const parsed = parseSavingsGoalRow(data);
+      store.savingsGoals = store.savingsGoals.map((g) => (g.id === id ? parsed : g));
+      return parsed;
     }
   }
 
-  const store = getOrCreateUserStore(userId);
   const idx = store.savingsGoals.findIndex((g) => g.id === id && g.user_id === userId);
   if (idx === -1) return null;
-  store.savingsGoals[idx] = { ...store.savingsGoals[idx], ...updates };
+  const parsed = parseSavingsGoalRow({ ...store.savingsGoals[idx], ...payload });
+  store.savingsGoals[idx] = parsed;
   return store.savingsGoals[idx];
+}
+
+export async function deleteSavingsGoal(userId: string, id: string): Promise<boolean> {
+  if (isSupabaseConfigured() && supabaseServer) {
+    await supabaseServer.from('savings_goals').delete().eq('id', id).eq('user_id', userId);
+  }
+  const store = getOrCreateUserStore(userId);
+  store.savingsGoals = store.savingsGoals.filter((g) => !(g.id === id && g.user_id === userId));
+  return true;
 }
 
 // ---------------- TRANSACTIONS ----------------
